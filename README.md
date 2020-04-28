@@ -11,6 +11,7 @@ These examples are from the book [Data-Driven Science and Engineering: Machine L
   A demonstration of SINDy identifying the Lorenz system 
 2. [Sparse-Identification-with-SINDy-on-Lorenz-system-with-control.ipynb](Sparse-Identification-with-SINDy-on-Lorenz-system-with-control.ipynb)
   A demonstration of SINDYc identifying the forced Lorenz system
+3. [sindy.py](sindy.py) Python module used in above examples.
 
 [1]: http://www.databookuw.com
 [2]: https://en.wikipedia.org/wiki/System_identification
