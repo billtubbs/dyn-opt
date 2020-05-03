@@ -3,12 +3,12 @@ import pandas as pd
 from dynopt.models.models import NonLinearModel
 
 # Simulate a non-linear system of ODEs
-f1 = lambda x1, x2: x2 - 2 * x1 + x1**2
-f2 = lambda x1, x2: 1 + x1**2
+dx1dt = lambda x1, x2: x2 - 2 * x1 + x1**2
+dx2dt = lambda x1, x2: 1 + x1**2
 
 # Generate (X, Y) data samples
 X_data = np.array([[1, 1], [1, 2], [2, 2], [2, 3], [3, 1], [3, 3]])
-Y_data = np.array([[f1(*x), f2(*x)] for x in X_data]).astype(float)
+Y_data = np.array([[dx1dt(*x), dx2dt(*x)] for x in X_data]).astype(float)
 x_names = ['x_1', 'x_2']  # You can use any names
 y_names = ['dx_1/dt', 'dx_2/dt']  # You can use any names
 
