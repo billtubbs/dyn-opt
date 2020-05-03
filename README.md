@@ -310,7 +310,7 @@ There is also an [official PySindy package][4] developed by Brian de Silva et al
 [4]: https://github.com/dynamicslab/pysindy
 
 
-## 3. Data Preprocessing
+## 2. Data Preprocessing
 
 The [dynopt.preprocessing.utils](dynopt.preprocessing.utils) module contains a variety
 of functions commonly used for preprocessing time-series data in preparation for 
@@ -334,4 +334,5 @@ fitting dynamic models.
  - `feature_dataframe_from_expressions(data, expressions)`
  - `feature_array_from_expressions(data, expressions)`
  
-(Documentation not yet written).
+Please refer to the docstrings in [dynopt.preprocessing.utils.py](dynopt.preprocessing.utils.py)
+for details on these functions.
