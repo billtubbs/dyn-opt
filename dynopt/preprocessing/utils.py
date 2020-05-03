@@ -38,18 +38,18 @@ from scipy.signal import savgol_filter
 
 
 def split_name(name):
-    """Identifies the timestep increment in a parameter
-    name of the format 'Name[t+i]' and returns name, i
-    where name is the string before '[' and i is the
-    integer timestep increment/decrement.
+    """Identifies the timestep increment in a parameter name of
+    the format 'Name[t+i]' and returns name, i where name is
+    the string before '[' and i is the integer timestep
+    increment/decrement.
 
     Returns:
         i (int): Timestep increment
 
     Raises:
         ValueError if name contains '[' or ']' but it does
-            not match the convention 'Name[t+i]' (spaces
-            not allowed inside brackets).
+            not match the convention 'Name[t+i]' (spaces not 
+            allowed inside brackets).
 
     Examples:
     >>> split_name('T1[t-1]')
@@ -85,9 +85,8 @@ def name_with_t_inc(name, inc):
 
 
 def add_timestep_indices(data, cols=None):
-    """Returns a copy of data with incremental timestep
-    indices added to column names following the
-    convention:
+    """Returns a copy of data with incremental timestep indices 
+    added to column names following the convention:
         'X' -> 'X[t]'
         'X[t+n]' -> 'X[t+n]' (i.e. no change)
     """
@@ -107,10 +106,9 @@ def add_timestep_indices(data, cols=None):
 
 
 def var_name_sequences(names, t0, tn, step=1):
-    """Returns a list of variable names based on the
-    convention 'X[t+n]' represents the value of the
-    variable with name 'X' in the time step n steps
-    from the current timestep.
+    """Returns a list of variable names based on the convention
+    'X[t+n]' represents the value of the variable with name 
+    'X' in the time step n steps from the current timestep.
 
     Example:
     >>> var_name_sequences(['A', 'B'], 0, 3)
@@ -132,8 +130,7 @@ def var_name_sequences(names, t0, tn, step=1):
 
 def add_previous_or_subsequent_value(data, n, cols=None, prev=False,
                                      dropna=False):
-    """See functions add_previous_values() and
-    add_subsequent_values() for usage.
+    """See functions add_previous_values() and add_subsequent_values().
     """
 
     data = add_timestep_indices(data)
@@ -487,7 +484,7 @@ def add_ewmas(data, cols=None, dropna=False, alpha=0.4, sub='_ewma',
 
 def polynomial_features(y_in, order=3):
     """Calculate polynomial terms up to given order for all 
-    data points in y_in.  This function is similar to 
+    data points in y_in.  This function is similar to the 
     sklearn.preprocessing.PolynomialFeatures method but 
     considerably faster.
 
@@ -622,10 +619,11 @@ def polynomial_feature_labels(n_vars, order, names=None,
 
 
 def feature_dataframe_from_expressions(data, expressions):
-    """Generate dataframe of calculated values using list of expressions
-    and set of data.  If data is a dataframe, the column names must
-    be used in the expressions.  If data is an array, the expressions
-    must use 'x0', 'x1', etc. to reference the columns.
+    """Generate dataframe of calculated values using list of 
+    expressions and set of data.  If data is a dataframe, the 
+    column names must be used in the expressions.  If data is
+    an array, the expressions must use 'x0', 'x1', etc. to 
+    reference the columns.
 
     Args:
         data (DataFrame or array): Input data.
@@ -656,10 +654,11 @@ def feature_dataframe_from_expressions(data, expressions):
 
 
 def feature_array_from_expressions(data, expressions):
-    """Generate array of calculated values using list of expressions
-    and set of data.  If data is a dataframe, the column names must
-    be used in the expressions.  If data is an array, the expressions
-    must use 'x0', 'x1', etc. to reference the columns.
+    """Generate array of calculated values using list of
+    expressions and set of data.  If data is a dataframe,
+    the column names must be used in the expressions.  If 
+    data is an array, the expressions must use 'x0', 'x1',
+    etc. to reference the columns.
 
     Args:
         data (DataFrame or array): Input data.
