@@ -17,9 +17,9 @@ Instead, you can pass all the data to each model and it will only use the fields
 it was intended for.
 
 The models also allow you to specify additional calculated input features which are
-automatically calculated prior to model-fitting using the Pandas `eval` method.  
-This allows you to define non-linear features as expressions = (see the nonlinear 
-model fitting example below).
+automatically calculated prior to model-fitting using the Pandas [`eval`](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.eval.html#pandas-dataframe-eval) method.  This 
+allows you to define non-linear features as expressions (see the nonlinear model 
+fitting example below).
 
 
 ## Example 1 - Linear regression on a subset of features
@@ -271,7 +271,8 @@ has identified the correct terms as well as the correct coefficients exactly.
 The SINDy code in this package is based on the methods and code provided in the book 
 [Data-Driven Science and Engineering: Machine Learning, Dynamical Systems, and Control (1st ed.) by Brunton, S. L., & Kutz, J. N. (2019)][1].
 
-The following notebooks show how replicate two of the examples in the book using the code in this package:
+The following notebooks show how to replicate two of the examples in the book using 
+the code in this repository:
 
 1. [Sparse-Identification-with-SINDy-on-Lorenz-system.ipynb](Sparse-Identification-with-SINDy-on-Lorenz-system.ipynb) 
   A demonstration of SINDy identifying the Lorenz system 
