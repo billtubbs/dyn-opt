@@ -16,13 +16,12 @@ and [dynamic optimization][3].
 ## 1. Model Fitting
 
 The [Model](dynopt.models.models.Model) class and its sub-classes provide convenient
-interfaces for running model estimation and evaluation experiments with data.  They
-help you generate and fit [Scikit-learn](https://scikit-learn.org/stable/) estimators 
-to data stored in [Pandas dataframes](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html). 
+interfaces for running model estimation and evaluation experiments with [Scikit-learn](https://scikit-learn.org/stable/) estimators.  They help you generate and fit models to data stored in [Pandas dataframes](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html) and also make it easier to reliably
+use the fitted models for online prediction.
 
 Because data in a Pandas dataframe is labelled, the models can be configured to use
-specific data while ignoring data that is not relevant.  This means you can easily 
-automate model design, testing and evaluation with different inputs and outputs,
+specific data inputs while ignoring other data that is not relevant.  This means you 
+can automate model design, testing and evaluation with different inputs and outputs,
 without having to worry about re-sizing and matcing the data sets to each model.
 Instead, you can pass all the data to each model and it will only use the fields
 it was intended for.
@@ -309,3 +308,30 @@ There is also an [official PySindy package][4] developed by Brian de Silva et al
 [2]: https://en.wikipedia.org/wiki/System_identification
 [3]: https://en.wikipedia.org/wiki/Control_(optimal_control_theory)
 [4]: https://github.com/dynamicslab/pysindy
+
+
+## 3. Data Preprocessing
+
+The [dynopt.preprocessing.utils](dynopt.preprocessing.utils) module contains a variety
+of functions commonly used for preprocessing time-series data in preparation for 
+fitting dynamic models.
+
+ - `split_name(name)`
+ - `t_inc_str(inc)`
+ - `name_with_t_inc(name, inc)`
+ - `add_timestep_indices(data, cols=None)`
+ - `var_name_sequences(names, t0, tn, step=1)`
+ - `add_previous_or_subsequent_value(data, n, cols=None, prev=False, dropna=False)`
+ - `add_subsequent_values(data, n=1, cols=None, dropna=False)`
+ - `add_previous_values(data, n=1, cols=None, dropna=False)`
+ - `add_differences(data, n=1, cols=None, dropna=False, sub='_m')`
+ - `add_rolling_averages(data, window_length, cols=None, dropna=False, sub='_ra')`
+ - `add_filtered_values_savgol(data, window_length, polyorder, cols=None, dropna=False, pre='', sub='_sgf', *args, **kwargs)`
+ - `add_derivatives_savgol(data, window_length, delta, polyorder=2, cols=None, dropna=False, pre='d', sub='/dt_sgf', *args, **kwargs)`
+ - `add_ewmas(data, cols=None, dropna=False, alpha=0.4, sub='_ewma', *args, **kwargs)`
+ - `polynomial_features(y_in, order=3)`
+ - `polynomial_feature_labels(n_vars, order, names=None, vstr='x', psym='**')`
+ - `feature_dataframe_from_expressions(data, expressions)`
+ - `feature_array_from_expressions(data, expressions)`
+ 
+(Documentation not yet written).
