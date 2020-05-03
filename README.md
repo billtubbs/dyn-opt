@@ -266,7 +266,9 @@ print(model.coef_)
 ```
 
 Again, if you look at the original governing equations above, you can see that it 
-has identified the correct terms as well as the correct coefficients exactly.
+has identified the correct terms as well as the coefficients exactly.
+
+## References
 
 The SINDy code in this package is based on the methods and code provided in the book 
 [Data-Driven Science and Engineering: Machine Learning, Dynamical Systems, and Control (1st ed.) by Brunton, S. L., & Kutz, J. N. (2019)][1].
