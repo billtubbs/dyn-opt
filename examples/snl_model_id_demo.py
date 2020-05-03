@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from models import SparseNonLinearModel
+from dynopt.models.models import SparseNonLinearModel
 
 # Simulate a non-linear system of ODEs
 f1 = lambda x1, x2: x2 - 2 * x1 + x1**2

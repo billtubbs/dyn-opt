@@ -5,10 +5,9 @@ from functools import partial
 from scipy.integrate import odeint
 from sklearn.preprocessing import PolynomialFeatures
 from examples.lorenz import lorenz_odes, lorenz_odes_vectorized
-from dynopt.models.sindy import polynomial_features, \
-                                sparsify_dynamics_lstsq, \
+from dynopt.models.sindy import sparsify_dynamics_lstsq
+from dynopt.preprocessing.utils import polynomial_features, \
                                 polynomial_feature_labels
-
 
 class SindyTests(unittest.TestCase):
 
