@@ -2,12 +2,23 @@
 Various Python tools for non-linear function approximation, [system identification][2] 
 and [dynamic optimization][3].
 
-## Model Fitting
+## Contents
 
-The file [models.py](/dynopt/models/models.py) contains a class of models that provide a convenient
-interface for running model estimation and evaluation experiments with data.  They
-allow you to generate and fit [Scikit-learn](https://scikit-learn.org/stable/) 
-estimators to data stored in Pandas dataframes.  
+1. Models
+
+    - [dynopt.models.models](dynopt.models.models) - A class of models for running model estimation and evaluation experiments with data
+
+2. Preprocessing utilities
+
+    - [dynopt.preprocessing.utils](dynopt.preprocessing.utils) - Functions for preprocessing time-series data in preparation for model-fitting.
+
+
+## 1. Model Fitting
+
+The [Model](dynopt.models.models.Model) class and its sub-classes provide convenient
+interfaces for running model estimation and evaluation experiments with data.  They
+help you generate and fit [Scikit-learn](https://scikit-learn.org/stable/) estimators 
+to data stored in [Pandas dataframes](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html). 
 
 Because data in a Pandas dataframe is labelled, the models can be configured to use
 specific data while ignoring data that is not relevant.  This means you can easily 
@@ -20,6 +31,16 @@ The models also allow you to specify additional calculated input features which 
 automatically calculated prior to model-fitting using the Pandas [`DataFrame.eval`](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.eval.html#pandas-dataframe-eval) method.  
 This allows you to define non-linear features as expressions (see the nonlinear model 
 fitting example below).
+
+The following table summarizes the three main classes of models.
+
+| Model       | Data input/output type | Selectable inputs/outputs | Calculated inputs | Sparse model identification |
+| ----------- | :--------------------: | :-----------------------: | :---------------: | :-------------------------: | 
+| [Model](dynopt.models.models.Model)  | DataFrame  | Yes  | No  | No  |
+| [NonLinearModel](dynopt.models.models.NonLinearModel) | DataFrame  | Yes  | Yes  | No   |
+| [SparseNonLinearModel](dynopt.models.models.SparseNonLinearModel)  | DataFrame  | Yes  | Yes  | Yes  |
+
+The following examples illustrate how these three model types can be used.
 
 
 ## Example 1 - Linear regression on a subset of features
