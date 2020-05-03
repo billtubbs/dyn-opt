@@ -2,16 +2,26 @@
 Various Python tools for non-linear function approximation, [system identification][2] 
 and [dynamic optimization][3].
 
-## Model Fitting
+## Contents
 
-The file [models.py](/dynopt/models/models.py) contains a class of models that provide a convenient
-interface for running model estimation and evaluation experiments with data.  They
-allow you to generate and fit [Scikit-learn](https://scikit-learn.org/stable/) 
-estimators to data stored in Pandas dataframes.  
+1. Models
+
+    - [dynopt.models.models](dynopt.models.models) - A class of models for running model estimation and evaluation experiments with data
+
+2. Preprocessing utilities
+
+    - [dynopt.preprocessing.utils](dynopt.preprocessing.utils) - Functions for preprocessing time-series data in preparation for model-fitting.
+
+
+## 1. Model Fitting
+
+The [Model](dynopt.models.models.Model) class and its sub-classes provide convenient
+interfaces for running model estimation and evaluation experiments with [Scikit-learn](https://scikit-learn.org/stable/) estimators.  They help you generate and fit models to data stored in [Pandas dataframes](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html) and also make it easier to reliably
+use the fitted models for online prediction.
 
 Because data in a Pandas dataframe is labelled, the models can be configured to use
-specific data while ignoring data that is not relevant.  This means you can easily 
-automate model design, testing and evaluation with different inputs and outputs,
+specific data inputs while ignoring other data that is not relevant.  This means you 
+can automate model design, testing and evaluation with different inputs and outputs,
 without having to worry about re-sizing and matcing the data sets to each model.
 Instead, you can pass all the data to each model and it will only use the fields
 it was intended for.
@@ -20,6 +30,16 @@ The models also allow you to specify additional calculated input features which 
 automatically calculated prior to model-fitting using the Pandas [`DataFrame.eval`](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.eval.html#pandas-dataframe-eval) method.  
 This allows you to define non-linear features as expressions (see the nonlinear model 
 fitting example below).
+
+The following table summarizes the three main classes of models.
+
+| Model       | Data input/output type | Selectable inputs/outputs | Calculated inputs | Sparse model identification |
+| ----------- | :--------------------: | :-----------------------: | :---------------: | :-------------------------: | 
+| [Model](dynopt.models.models.Model)  | DataFrame  | Yes  | No  | No  |
+| [NonLinearModel](dynopt.models.models.NonLinearModel) | DataFrame  | Yes  | Yes  | No   |
+| [SparseNonLinearModel](dynopt.models.models.SparseNonLinearModel)  | DataFrame  | Yes  | Yes  | Yes  |
+
+The following examples illustrate how these three model types can be used.
 
 
 ## Example 1 - Linear regression on a subset of features
@@ -288,3 +308,31 @@ There is also an [official PySindy package][4] developed by Brian de Silva et al
 [2]: https://en.wikipedia.org/wiki/System_identification
 [3]: https://en.wikipedia.org/wiki/Control_(optimal_control_theory)
 [4]: https://github.com/dynamicslab/pysindy
+
+
+## 2. Data Preprocessing
+
+The [dynopt.preprocessing.utils](dynopt.preprocessing.utils) module contains a variety
+of functions commonly used for preprocessing time-series data in preparation for 
+fitting dynamic models.
+
+ - `split_name(name)`
+ - `t_inc_str(inc)`
+ - `name_with_t_inc(name, inc)`
+ - `add_timestep_indices(data, cols=None)`
+ - `var_name_sequences(names, t0, tn, step=1)`
+ - `add_previous_or_subsequent_value(data, n, cols=None, prev=False, dropna=False)`
+ - `add_subsequent_values(data, n=1, cols=None, dropna=False)`
+ - `add_previous_values(data, n=1, cols=None, dropna=False)`
+ - `add_differences(data, n=1, cols=None, dropna=False, sub='_m')`
+ - `add_rolling_averages(data, window_length, cols=None, dropna=False, sub='_ra')`
+ - `add_filtered_values_savgol(data, window_length, polyorder, cols=None, dropna=False, pre='', sub='_sgf', *args, **kwargs)`
+ - `add_derivatives_savgol(data, window_length, delta, polyorder=2, cols=None, dropna=False, pre='d', sub='/dt_sgf', *args, **kwargs)`
+ - `add_ewmas(data, cols=None, dropna=False, alpha=0.4, sub='_ewma', *args, **kwargs)`
+ - `polynomial_features(y_in, order=3)`
+ - `polynomial_feature_labels(n_vars, order, names=None, vstr='x', psym='**')`
+ - `feature_dataframe_from_expressions(data, expressions)`
+ - `feature_array_from_expressions(data, expressions)`
+ 
+Please refer to the docstrings in [dynopt/preprocessing/utils.py](dynopt/preprocessing/utils.py)
+for details on these functions.
