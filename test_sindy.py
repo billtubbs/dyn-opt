@@ -5,7 +5,8 @@ from functools import partial
 from scipy.integrate import odeint
 from sklearn.preprocessing import PolynomialFeatures
 from lorenz import lorenz_odes, lorenz_odes_vectorized
-from sindy import polynomial_features, sparsify_dynamics_lstsq
+from sindy import polynomial_features, sparsify_dynamics_lstsq, \
+                  polynomial_feature_labels
 
 
 class SindyTests(unittest.TestCase):
@@ -126,6 +127,36 @@ class SindyTests(unittest.TestCase):
         lamb = 1  # sparsification threshold lambda
         with self.assertRaises(ValueError):
             xi = sparsify_dynamics_lstsq(theta, dx, lamb)
+
+    def test_polynomial_feature_labels(self):
+
+        labels = polynomial_feature_labels(1, order=1)
+        test_labels = ['1', 'x0']
+        self.assertEqual(labels, test_labels)
+
+        labels = polynomial_feature_labels(1, order=2)
+        test_labels = ['1', 'x0', 'x0**2']
+        self.assertEqual(labels, test_labels)
+
+        labels = polynomial_feature_labels(1, order=3)
+        test_labels = ['1', 'x0', 'x0**2', 'x0**3']
+        self.assertEqual(labels, test_labels)
+
+        self.assertRaises(NotImplementedError, 
+                          polynomial_feature_labels, 1, order=4)
+
+        labels = polynomial_feature_labels(3, order=2)
+        test_labels = ['1', 'x0', 'x1', 'x2', 'x0**2', 'x0*x1', 
+                       'x0*x2', 'x1**2', 'x1*x2', 'x2**2']
+        self.assertEqual(labels, test_labels)
+
+        labels = polynomial_feature_labels(2, order=2, vstr='y_')
+        test_labels = ['1', 'y_0', 'y_1', 'y_0**2', 'y_0*y_1', 'y_1**2']
+        self.assertEqual(labels, test_labels)
+
+        labels = polynomial_feature_labels(2, order=2, vstr='y_', psym='^')
+        test_labels = ['1', 'y_0', 'y_1', 'y_0^2', 'y_0*y_1', 'y_1^2']
+        self.assertEqual(labels, test_labels)
 
 
 if __name__ == '__main__':

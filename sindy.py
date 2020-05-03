@@ -38,12 +38,15 @@ def polynomial_features(y_in, order=3):
             y_out_cols.append(y_in[:, i:] * y_in[:, i].reshape(-1, 1))
 
     # Poly order 3
-    if order >= 3:
+    if order == 3:
         # Use poly order 2 results
         results = y_out_cols[-n:]
         for j in range(0, n):
             for result in results[j:]:
                 y_out_cols.append(result * y_in[:, j].reshape(-1, 1))
+
+    if order > 3:
+        raise NotImplementedError("poly_order up to 3 implemented")
 
     return np.hstack(y_out_cols)
 
@@ -80,7 +83,7 @@ def sparsify_dynamics_lstsq(theta, y, lamb, max_iter=20):
     return xi
 
 
-def polynomial_feature_labels(n_vars, poly_order, names=None,
+def polynomial_feature_labels(n_vars, order, names=None,
                               vstr='x', psym='**'):
     """Returns a list of strings that represent the
     expressions of all the combinations of polynomial
@@ -145,19 +148,19 @@ def polynomial_feature_labels(n_vars, poly_order, names=None,
     labels = labels + names
 
     # Poly order 2
-    if poly_order >= 2:
+    if order >= 2:
         for i in range(n_vars):
             labels = labels + ['*'.join([names[i], names[j]])
                                for j in range(i, n_vars)]
 
     # Poly order 3
-    if poly_order == 3:
+    if order == 3:
         for i in range(n_vars):
             for j in range(i, n_vars):
                 labels = labels + ['*'.join([names[i], names[j], names[k]])
                                    for k in range(j, n_vars)]
 
-    if poly_order > 3:
+    if order > 3:
         raise NotImplementedError("poly_order up to 3 implemented")
 
     for name in names:
