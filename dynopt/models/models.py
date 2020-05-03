@@ -245,8 +245,8 @@ class NonLinearModel(Model):
     >>> x_names = ['x_1', 'x_2']  # You can use any names
     >>> y_names = ['dx_1/dt', 'dx_2/dt']  # You can use any names
     >>> # Define features to use (more than needed in this example)
-    >>> x_features = ['x0', 'x1', 'x0**2', 'x0*x1', 'x1**2']
-    >>> model = NonLinearModel(x_names, y_names, x_features=x_features)
+    >>> input_features = ['x0', 'x1', 'x0**2', 'x0*x1', 'x1**2']
+    >>> model = NonLinearModel(x_names, y_names, input_features=input_features)
     >>> # Prepare Pandas dataframes with correctly-named columns
     >>> X = pd.DataFrame(X_data, columns=x_names)
     >>> Y = pd.DataFrame(Y_data, columns=y_names)
@@ -277,7 +277,7 @@ class NonLinearModel(Model):
     estimator : class
         Estimator model to be used to fit the input-output data.
         If not specified, a LinearRegression instance used.
-    x_features : list of strings, optional
+    input_features : list of strings, optional
         List of feature expressions.  Features may simply be
         selected inputs ['x0', 'x1', ... etc.] or may include
         expressions of current inputs such as 'x0**2' and 'x1*x2'
@@ -299,22 +299,22 @@ class NonLinearModel(Model):
                  'exp': np.exp, 'log': np.log, 'tanh': np.tanh,
                  'sqrt': np.sqrt}
 
-    def __init__(self, x_names, y_names, estimator=None, x_features=None, 
+    def __init__(self, x_names, y_names, estimator=None, input_features=None, 
                  scale_inputs=False, scale_outputs=False, *args, **kwargs):
         super().__init__(x_names, y_names, scale_inputs=scale_inputs, 
                          scale_outputs=scale_outputs, *args, **kwargs)
-        if x_features is None:
-            x_features = self._x_labels
-        self.x_features = x_features
-        self.input_transformer = self.input_transformer_(self.x_features)
+        if input_features is None:
+            input_features = self._x_labels
+        self.input_features = input_features
+        self.input_transformer = self.input_transformer_(self.input_features)
         self.arg_names = ['x_names', 'y_names']
-        self.kwarg_names = ['estimator', 'x_features']
+        self.kwarg_names = ['estimator', 'input_features']
         self.class_name = 'NonLinearModel'
 
     def get_params(self, deep=True):
         """Get parameters for this estimator."""
         return {"x_names": self.x_names, "y_names": self.y_names, 
-                "estimator": self.estimator, "x_features": self.x_features}
+                "estimator": self.estimator, "input_features": self.input_features}
 
     @staticmethod
     def input_transformer_(input_features):
@@ -341,7 +341,7 @@ class NonLinearModel(Model):
         model.estimator.coef_ instead.
         """
         return pd.DataFrame(self.estimator.coef_, index=self._y_labels,
-                            columns=self.x_features)
+                            columns=self.input_features)
 
     @coef_.setter
     def coef_(self, values):
@@ -438,7 +438,7 @@ class NonLinearModel(Model):
             #TODO: Should be checking keys!
             ref_dict = {**x_values, **self.functions}
             # Calculate evaluated features
-            x = [eval(expr, ref_dict) for expr in self.x_features]
+            x = [eval(expr, ref_dict) for expr in self.input_features]
             x = np.array(x, dtype=np.float).reshape(1, -1)
             if self.input_scaler:
                 # Re-scale inputs
@@ -542,7 +542,7 @@ class SparseNonLinearModel(NonLinearModel):
                  poly_order=3, threshold=None, scale_inputs=False, 
                  scale_outputs=False, *args, **kwargs):
         super().__init__(x_names, y_names, estimator=estimator,
-                         x_features=None, scale_inputs=scale_inputs,
+                         input_features=None, scale_inputs=scale_inputs,
                          scale_outputs=scale_outputs, *args, **kwargs)
         # In this model the feature generator is re-initialized
         # later when the fit method is called.
@@ -556,7 +556,7 @@ class SparseNonLinearModel(NonLinearModel):
     def get_params(self, deep=True):
         """Get parameters for this estimator."""
         return {"x_names": self.x_names, "y_names": self.y_names, 
-                "estimator": self.estimator, "x_features": self.x_features,
+                "estimator": self.estimator, "input_features": self.input_features,
                 "custom_features": self.custom_features, "poly_order": self.poly_order,
                 "threshold": self.threshold}
 
@@ -616,13 +616,13 @@ class SparseNonLinearModel(NonLinearModel):
         # Set linear estimator coefficients to values found from
         # sparse identification
         coefficients = non_zero_coefs.T.values
-        self.x_features = non_zero_coefs.index.tolist()
+        self.input_features = non_zero_coefs.index.tolist()
         self.estimator.intercept_ = intercepts
         self.estimator.coef_ = coefficients
 
         if self.input_transformer:
             # Re-initialize input transformer
-            self.input_transformer = self.input_transformer_(self.x_features)
+            self.input_transformer = self.input_transformer_(self.input_features)
             X = self.input_transformer.fit_transform(X) 
         # Scale all inputs and outputs last
         if self.input_scaler:
@@ -830,10 +830,10 @@ class DynamicSystem(Model):
 
     def __init__(self, xin_names, dxdt_names, uin_names=None, estimator=None,
                  scale_inputs=None, scale_outputs=None, *args, **kwargs):
-        self._xin_names = None
+        self._xin_names = []
         self._xin_labels = None
         self._xin_rename_map = None
-        self._uin_names = None
+        self._uin_names = []
         self._uin_labels = None
         self._uin_rename_map = None
         self._dxdt_names = None
@@ -845,21 +845,12 @@ class DynamicSystem(Model):
             self.uin_names = []
         else:
             self.uin_names = list(uin_names)
-        if scale_inputs:
-            input_scaler = StandardScaler()
-        else:
-            input_scaler = None
-        if scale_outputs:
-            output_scaler = StandardScaler()
-        else:
-            output_scaler = None
-        if estimator is None:
-            estimator = LinearRegression(*args, **kwargs)
-        self.input_scaler = input_scaler
-        self.output_scaler = output_scaler
-        self.estimator = estimator
-        self.arg_names = ['xin_names', 'uin_names', 'dxdt_names']
-        self.kwarg_names = ['estimator']
+        x_names = self.xin_names + self.uin_names
+        y_names = self.dxdt_names
+        super().__init__(x_names, y_names, estimator=estimator, scale_inputs=scale_inputs, 
+                         scale_outputs=scale_outputs)
+        self.arg_names = ['xin_names', 'dxdt_names']
+        self.kwarg_names = ['estimator', 'uin_names']
         self.class_name = 'DynamicSystem'
 
     #TODO: Rename xin_names, uin_names, dxdt_names, and input_features with
@@ -867,8 +858,8 @@ class DynamicSystem(Model):
 
     def get_params(self, deep=True):
         """Get parameters for this estimator."""
-        return {"xin_names": self.xin_names, "uin_names": self.uin_names, 
-                "dxdt_names": self.dxdt_names, "estimator": self.estimator}
+        return {"xin_names": self.xin_names, "dxdt_names": self.dxdt_names, 
+                "uin_names": self.uin_names, "estimator": self.estimator}
 
     @property
     def xin_names(self):
@@ -879,6 +870,7 @@ class DynamicSystem(Model):
         self._xin_names = value
         self._xin_labels = [f'x{i}' for i in range(len(value))]
         self._xin_rename_map = dict(zip(value, self._xin_labels))
+        self.x_names = self._xin_names + self.uin_names
 
     @property
     def uin_names(self):
@@ -889,6 +881,7 @@ class DynamicSystem(Model):
         self._uin_names = value
         self._uin_labels = [f'u{i}' for i in range(len(value))]
         self._uin_rename_map = dict(zip(value, self._uin_labels))
+        self.x_names = self.xin_names + self._uin_names
 
     @property
     def dxdt_names(self):
@@ -900,25 +893,7 @@ class DynamicSystem(Model):
         self._dxdt_names = value
         self._dxdt_labels = [f'dxdt{i}' for i in range(len(value))]
         self._dxdt_rename_map = dict(zip(value, self._dxdt_labels))
-
-    def fit(self, inputs, outputs):
-        """Fit linear model to features.
-        """
-        # TODO: Allow arrays too?
-        assert isinstance(inputs, pd.DataFrame)
-        assert isinstance(outputs, pd.DataFrame)
-
-        # Select required data
-        inputs = inputs[self.xin_names + self.uin_names]
-        outputs = outputs[self.dxdt_names]
-
-        # Note: Can't use scikit learn Pipeline because it doesn't
-        # support transformations to outputs
-        if self.input_scaler:
-            inputs = self.input_scaler.fit_transform(inputs.values.astype(np.float))
-        if self.output_scaler:
-            outputs = self.output_scaler.fit_transform(outputs.values.astype(np.float))
-        self.estimator.fit(inputs, outputs)
+        self.y_names = value
 
     def predict(self, inputs):
         """Predict using the model.  If inputs is a DataFrame with named
@@ -948,40 +923,7 @@ class DynamicSystem(Model):
         >>> model.predict(x)
         {'dx_1/dt': 2.0, 'dx_2/dt': 5.0}
         """
-
-        if isinstance(inputs, (dict, pd.Series)):
-            # This is 50 times faster than when passing one data
-            # point as a dataframe.
-            if isinstance(inputs, dict):
-                x = np.array(list(inputs.values()), dtype=np.float).reshape(1, -1)
-            else:
-                #TODO: Should be checking keys!
-                x = inputs.values.reshape(1, -1)
-            if self.input_scaler:
-                # Re-scale inputs
-                x = self.input_scaler.transform(x)
-            dxdt_values = self.estimator.predict(x).reshape(-1)
-            if self.output_scaler:
-                # Re-scale outputs
-                dxdt_values = self.output_scaler.inverse_transform(dxdt_values)
-            return dict(zip(self.dxdt_names, dxdt_values))
-        elif isinstance(inputs, pd.DataFrame):
-            # Re-label inputs as 'x0', 'x1', 'u1', ... etc.
-            index = inputs.index
-            inputs = inputs[self.xin_names + self.uin_names]
-            inputs = inputs.rename(columns={**self._xin_rename_map,
-                                            **self._uin_rename_map})
-            if self.input_scaler:
-                # Apply the scaling to input data
-                inputs = self.input_scaler.transform(inputs.values.astype(np.float))
-            dxdt = self.estimator.predict(inputs)
-            if self.output_scaler:
-                # Reverse the scaling on outputs
-                dxdt = self.output_scaler.inverse_transform(dxdt)
-            return pd.DataFrame(dxdt, index=index, columns=self.dxdt_names)
-        else:
-            inputs = dict(zip(self.x_names, inputs))
-            return self.predict(inputs)
+        return super().predict(inputs)
 
     def score(self, inputs, dxdt, sample_weight=None):
         """Returns the coefficient of determination R^2 of the
@@ -989,8 +931,7 @@ class DynamicSystem(Model):
         """
         dxdt = dxdt[self.dxdt_names]
         dxdt_pred = self.predict(inputs)
-        return r2_score(dxdt, dxdt_pred, sample_weight=sample_weight,
-                        multioutput='uniform_average')
+        return super().score(inputs, dxdt, sample_weight=sample_weight)
 
     def __repr__(self):
         all_args = [self.__getattribute__(a).__repr__() for a in self.arg_names] + \
@@ -1000,7 +941,7 @@ class DynamicSystem(Model):
         return f"{self.class_name}({', '.join(all_args)})"
 
 
-class NonLinearDynamicSystem(DynamicSystem):
+class NonLinearDynamicSystem(NonLinearModel):
     """Model interface for running dynamical system identification
     and model evaluation experiments with models that include 
     non-linear functions of the input variables.  These can be used
@@ -1086,13 +1027,29 @@ class NonLinearDynamicSystem(DynamicSystem):
     def __init__(self, xin_names, dxdt_names, uin_names=None, estimator=None,
                  input_features=None, scale_inputs=False, scale_outputs=False, 
                  *args, **kwargs):
-        super().__init__(xin_names, dxdt_names, uin_names=uin_names, 
-                         scale_inputs=scale_inputs, scale_outputs=scale_outputs, 
-                         *args, **kwargs)
+
+        self._xin_names = []
+        self._xin_labels = None
+        self._xin_rename_map = None
+        self._uin_names = []
+        self._uin_labels = None
+        self._uin_rename_map = None
+        self._dxdt_names = None
+        self._dxdt_labels = None
+        self._dxdt_rename_map = None
+        self.xin_names = list(xin_names)
+        self.dxdt_names = list(dxdt_names)
+        if uin_names is None:
+            self.uin_names = []
+        else:
+            self.uin_names = list(uin_names)
+        x_names = self.xin_names + self.uin_names
+        y_names = self.dxdt_names
         if input_features is None:
             input_features = self._xin_labels + self._uin_labels
-        self.input_features = input_features
-        self.input_transformer = self.input_transformer_(self.input_features)
+        super().__init__(x_names, y_names, estimator=estimator, 
+                         input_features=input_features, scale_inputs=scale_inputs, 
+                         scale_outputs=scale_outputs, *args, **kwargs)
         self.arg_names = ['xin_names', 'uin_names', 'dxdt_names']
         self.kwarg_names = ['estimator', 'input_features']
         self.class_name = 'NonLinearDynamicSystem'
@@ -1102,6 +1059,40 @@ class NonLinearDynamicSystem(DynamicSystem):
         return {"xin_names": self.xin_names, "uin_names": self.uin_names, 
                 "dxdt_names": self.dxdt_names, "estimator": self.estimator, 
                 "input_features": self.input_features}
+
+    @property
+    def xin_names(self):
+        return self._xin_names
+
+    @xin_names.setter
+    def xin_names(self, value):
+        self._xin_names = value
+        self._xin_labels = [f'x{i}' for i in range(len(value))]
+        self._xin_rename_map = dict(zip(value, self._xin_labels))
+        self.x_names = self._xin_names + self.uin_names
+
+    @property
+    def uin_names(self):
+        return self._uin_names
+
+    @uin_names.setter
+    def uin_names(self, value):
+        self._uin_names = value
+        self._uin_labels = [f'u{i}' for i in range(len(value))]
+        self._uin_rename_map = dict(zip(value, self._uin_labels))
+        self.x_names = self.xin_names + self._uin_names
+
+    @property
+    def dxdt_names(self):
+        """The names of the output variables (dx/dt)."""
+        return self._dxdt_names
+
+    @dxdt_names.setter
+    def dxdt_names(self, value):
+        self._dxdt_names = value
+        self._dxdt_labels = [f'dxdt{i}' for i in range(len(value))]
+        self._dxdt_rename_map = dict(zip(value, self._dxdt_labels))
+        self.y_names = value
 
     @property
     def coef_(self):
@@ -1148,48 +1139,6 @@ class NonLinearDynamicSystem(DynamicSystem):
 
         return n_params
 
-    @staticmethod
-    def input_transformer_(input_features):
-        """Initialize the input feature transformer based on a list 
-        of feature expressions.  Features may simply be selected 
-        inputs ['x0', 'x1', 'u0', ... etc.] or may include expressions of
-        current inputs such as 'x0**2' and 'x1*u0' (the available input 
-        names is defined by the lengths of self.xin_names and 
-        self.uin_names).
-
-        Parameters
-        ----------
-        input_features : list of strings
-            Features and feature-expressions to be used by the model.
-        """
-        feature_function = partial(feature_dataframe_from_expressions,
-                                   expressions=input_features)
-        input_transformer = FunctionTransformer(feature_function, validate=False)
-        return input_transformer
-
-    def fit(self, inputs, dxdt):
-        """Fit linear model to features.
-        """
-        # TODO: Allow arrays too?
-        assert isinstance(inputs, pd.DataFrame)
-        assert isinstance(dxdt, pd.DataFrame)
-
-        # Re-label inputs as 'x0', 'x1', 'u0', etc.
-        input_names = self.xin_names + self.uin_names
-        rename_map = {**self._xin_rename_map, **self._uin_rename_map}
-        inputs = inputs[input_names].rename(columns=rename_map)
-        dxdt = dxdt[self.dxdt_names]
-
-        # Note: Can't use scikit learn Pipeline because it doesn't
-        # support transformations to outputs (y)
-        if self.input_transformer:
-            inputs = self.input_transformer.fit_transform(inputs)
-        if self.input_scaler:
-            inputs = self.input_scaler.fit_transform(inputs.values.astype(np.float))
-        if self.output_scaler:
-            dxdt = self.output_scaler.fit_transform(dxdt.values.astype(np.float))
-        self.estimator.fit(inputs, dxdt)
-
     def predict(self, inputs):
         """Predict using the model.  If inputs is a DataFrame with 
         named columns (input data vectors in rows) then the predicted 
@@ -1220,44 +1169,5 @@ class NonLinearDynamicSystem(DynamicSystem):
         """
         # TODO: Replace examples with one with control inputs
 
-        if isinstance(inputs, (dict, pd.Series)):
-            # This is 50 times faster than when passing one data
-            # point as a dataframe.
-            # Re-label inputs as 'x0', 'x1', 'u0', etc.
-            rename_map = {**self._xin_rename_map, **self._uin_rename_map}
-            input_values = {rename_map[k]: v for k, v in inputs.items()}
-            #TODO: Should be checking keys!
-            ref_dict = {**input_values, **self.functions}
-            # Calculate evaluated features
-            x = [eval(expr, ref_dict) for expr in self.input_features]
-            x = np.array(x, dtype=np.float).reshape(1, -1)
-            if self.input_scaler:
-                # Re-scale inputs
-                x = self.input_scaler.transform(x)
-            dxdt_values = self.estimator.predict(x).reshape(-1)
-            if self.output_scaler:
-                # Re-scale outputs
-                dxdt_values = self.output_scaler.inverse_transform(y_values)
-            return dict(zip(self.dxdt_names, dxdt_values))
-        elif isinstance(inputs, pd.DataFrame):
-            # Re-label inputs as 'x0', 'x1', 'u0', etc.
-            index = inputs.index
-            input_names = self.xin_names + self.uin_names
-            rename_map = {**self._xin_rename_map, **self._uin_rename_map}
-            inputs = inputs[input_names].rename(columns=rename_map)
-            if self.input_transformer:
-                inputs = self.input_transformer.transform(inputs)
-            if self.input_scaler:
-                # Apply the scaling to input data
-                inputs = self.input_scaler.transform(inputs.values.astype(np.float))
-            dxdt = self.estimator.predict(inputs)
-            if self.output_scaler:
-                # Reverse the scaling on output predictions
-                dxdt = self.output_scaler.inverse_transform(dxdt)
-            return pd.DataFrame(dxdt, index=index, columns=self.dxdt_names)
-        else:
-            input_names = self.xin_names + self.uin_names
-            inputs = dict(zip(input_names, inputs))
-            return self.predict(inputs)
-
+        return super().predict(inputs)
     # TODO: Sub-classes for FP model and include dydt functions for trajectory prediction
