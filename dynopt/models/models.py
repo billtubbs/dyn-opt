@@ -18,6 +18,7 @@ from sklearn.linear_model import LinearRegression
 from sklearn.svm import SVR
 from sklearn.preprocessing import StandardScaler, FunctionTransformer
 from sklearn.metrics import r2_score
+from sklearn.linear_model._base import LinearModel
 from dynopt.preprocessing.utils import feature_dataframe_from_expressions, \
                                        feature_array_from_expressions
 from dynopt.models.sindy import sparsify_dynamics_lstsq
@@ -45,7 +46,7 @@ class Model:
     y_names : list of strings,
         Names of model output variables (predictions).
     estimator : LinearRegression, Lasso, MLPRegressor or similar
-        Estimator model to be used to fit the input-output data.
+        estimator model to be used to fit the input-output data.
         If not specified, a LinearRegression instance is created.
     scale_inputs : boolean, optional, default False
         If True, the regressors (X) will be standardized before
@@ -316,7 +317,7 @@ class NonLinearModel(Model):
                 "estimator": self.estimator, "x_features": self.x_features}
 
     @staticmethod
-    def input_transformer_(x_features):
+    def input_transformer_(input_features):
         """Initialize the input feature transformer based on a list 
         of feature expressions.  Features may simply be selected 
         inputs ['x0', 'x1', ... etc.] or may include expressions of
@@ -325,11 +326,11 @@ class NonLinearModel(Model):
 
         Parameters
         ----------
-        x_features : list of strings
+        input_features : list of strings
             Features and feature-expressions to be used by the model.
         """
         feature_function = partial(feature_dataframe_from_expressions,
-                                   expressions=x_features)
+                                   expressions=input_features)
         input_transformer = FunctionTransformer(feature_function, validate=False)
         return input_transformer
 
@@ -464,8 +465,6 @@ class NonLinearModel(Model):
         else:
             X = dict(zip(self.x_names, X))
             return self.predict(X)
-
-    # TODO: Sub-classes for FP model and include dydt functions for trajectory prediction
 
 
 class SparseNonLinearModel(NonLinearModel):
@@ -753,7 +752,7 @@ class SVRMultipleOutputs:
         return f"SVRMultipleOutputs({', '.join(all_args)})"
 
 
-class LinearPredictionModel(LinearRegression):
+class LinearPredictionModel(LinearModel):
     """This model is for prediction only.  It has no fit method.
     You can initialize it with fixed values for coefficients 
     and intercepts.
@@ -817,7 +816,7 @@ class DynamicSystem(Model):
     dxdt_names : list of strings,
         Names of state derivatives variables (system outputs).
     estimator : LinearRegression, Lasso, MLPRegressor or similar
-        Estimator model to be used to fit the input-output data.
+        estimator model to be used to fit the input-output data.
         If not specified, a LinearRegression instance is created.
     scale_inputs : boolean, optional, default False
         If True, the inputs (xin, uin) will be standardized before
@@ -841,8 +840,11 @@ class DynamicSystem(Model):
         self._dxdt_labels = None
         self._dxdt_rename_map = None
         self.xin_names = list(xin_names)
-        self.uin_names = list(uin_names)
         self.dxdt_names = list(dxdt_names)
+        if uin_names is None:
+            self.uin_names = []
+        else:
+            self.uin_names = list(uin_names)
         if scale_inputs:
             input_scaler = StandardScaler()
         else:
@@ -996,3 +998,266 @@ class DynamicSystem(Model):
                     for a in self.kwarg_names
                     if self.__getattribute__(a) is not None]
         return f"{self.class_name}({', '.join(all_args)})"
+
+
+class NonLinearDynamicSystem(DynamicSystem):
+    """Model interface for running dynamical system identification
+    and model evaluation experiments with models that include 
+    non-linear functions of the input variables.  These can be used
+    to identify linearizations of non-linear models and to identify
+    sparse non-linear models that have only a few active terms.
+
+    The benefit of this approach is that you can easily automate
+    model design, identification, testing and evaluation without 
+    having to re-configure input and output data sets (the model 
+    instances only use the relevant data they require for training and
+    prediction).
+
+    Parameters
+    ----------
+    xin_names : list of strings,
+        Names of input state variables (x).
+    uin_names : list of strings,
+        Names of control input variables (u).
+    dxdt_names : list of strings,
+        Names of state derivatives variables (system outputs).
+    input_features : list of strings, optional
+        List of input expressions.  Input features may simply be
+        selected inputs ['x0', 'x1', 'u0', ... etc.] or may include
+        expressions of current inputs such as 'x0**2' and 'x1*u0'
+        (the available input names is defined by the lengths of 
+        self.xin_names and self.uin_names).
+    estimator : LinearRegression, Lasso, MLPRegressor or similar
+        estimator model to be used to fit the input-output data.
+        If not specified, a LinearRegression instance is created.
+    scale_inputs : boolean, optional, default False
+        If True, the inputs (xin, uin) will be standardized before
+        model-fitting by subtracting the mean and dividing by the
+        l2-norm.  See Scikit-Learn documentation for StandardScaler.
+    scale_outputs : boolean, optional, default False
+        If True, the outputs (dxdt) will be standardized before
+        model-fitting by subtracting the mean and dividing by the
+        l2-norm.  See Scikit-Learn documentation for StandardScaler.
+
+    Example:
+    >>> import numpy as np
+    >>> import pandas as pd
+    >>> # Simulate a non-linear system of ODEs
+    >>> f1 = lambda x1, x2: x2 - 2 * x1 + x1**2
+    >>> f2 = lambda x1, x2: 1 + x1**2
+    >>> # Generate (input, dxdt) data samples
+    >>> input_data = np.array([[1, 1], [1, 2], [2, 2], [2, 3], [3, 1], [3, 3]])
+    >>> dxdt_data = np.array([[f1(*x), f2(*x)] for x in input_data]).astype(float)
+    >>> xin_names = ['x_1', 'x_2']  # You can use any names
+    >>> dxdt_names = ['dx_1/dt', 'dx_2/dt']  # You can use any names
+    >>> # Define features to use (more than needed in this example)
+    >>> input_features = ['x0', 'x1', 'x0**2', 'x0*x1', 'x1**2']
+    >>> model = NonLinearDynamicSystem(xin_names, dxdt_names, uin_names=None, 
+    ...                                input_features=input_features)
+    >>> # Prepare Pandas dataframes with correctly-named columns
+    >>> inputs = pd.DataFrame(input_data, columns=xin_names)
+    >>> dxdt = pd.DataFrame(dxdt_data, columns=yin_names)
+    >>> model.fit(inputs, dxdt)
+    >>> # Check model parameters
+    >>> model.coef_.round(4)
+        x0   x1  x0**2  x0*x1  x1**2
+    y0 -2.0  1.0    1.0   -0.0   -0.0
+    y1  0.0  0.0    1.0   -0.0   -0.0
+    >>> model.intercept_.round(4)
+    y0   -0.0
+    y1    1.0
+    >>> model.predict(inputs).round(4)
+    dx_1/dt  dx_2/dt
+    0     -0.0      2.0
+    1      1.0      2.0
+    2      2.0      5.0
+    3      3.0      5.0
+    4      4.0     10.0
+    5      6.0     10.0
+    """
+    #TODO: Replace example with one that has control inputs (e.g. pendulum)
+
+    # Functions which can be used in expressions for calculating
+    # input features (more can be added).
+    functions = {'sin': np.sin, 'cos': np.cos, 'tan': np.tan,
+                 'exp': np.exp, 'log': np.log, 'tanh': np.tanh,
+                 'sqrt': np.sqrt}
+
+    def __init__(self, xin_names, dxdt_names, uin_names=None, estimator=None,
+                 input_features=None, scale_inputs=False, scale_outputs=False, 
+                 *args, **kwargs):
+        super().__init__(xin_names, dxdt_names, uin_names=uin_names, 
+                         scale_inputs=scale_inputs, scale_outputs=scale_outputs, 
+                         *args, **kwargs)
+        if input_features is None:
+            input_features = self._xin_labels + self._uin_labels
+        self.input_features = input_features
+        self.input_transformer = self.input_transformer_(self.input_features)
+        self.arg_names = ['xin_names', 'uin_names', 'dxdt_names']
+        self.kwarg_names = ['estimator', 'input_features']
+        self.class_name = 'NonLinearDynamicSystem'
+
+    def get_params(self, deep=True):
+        """Get parameters for this estimator."""
+        return {"xin_names": self.xin_names, "uin_names": self.uin_names, 
+                "dxdt_names": self.dxdt_names, "estimator": self.estimator, 
+                "input_features": self.input_features}
+
+    @property
+    def coef_(self):
+        """The coefficients from the linear model (model.coef_)
+        as a Pandas Dataframe.  To access the attribute directly use
+        model.estimator.coef_ instead.
+        """
+        return pd.DataFrame(self.estimator.coef_, index=self._dxdt_labels,
+                            columns=self.input_features)
+
+    @coef_.setter
+    def coef_(self, values):
+        self.estimator.coef_[:] = values
+
+    @property
+    def intercept_(self):
+        """The intercepts from the linear model (model.intercept_)
+        as a Pandas Series.  To access the attribute directly use
+        model.estimator.intercept_ instead.
+        """
+        return pd.Series(self.estimator.intercept_, index=self._dxdt_labels)
+
+    @intercept_.setter
+    def intercept_(self, values):
+        self.estimator.intercept_[:] = values
+
+    @property
+    def n_params(self):
+        """Get total number of parameters in the model.
+        """
+        n_params = 0
+        attr_names = ['coef_', 'intercept_', 'coefs_', 'intercepts_']
+        param_arrays = []
+        for attr_name in attr_names:
+            try:
+                attr = getattr(self.estimator, attr_name)
+            except AttributeError:
+                continue
+            if isinstance(attr, list):
+                param_arrays += attr
+            else:
+                param_arrays.append(attr)
+        n_params = sum([(a != 0).sum() for a in param_arrays])
+
+        return n_params
+
+    @staticmethod
+    def input_transformer_(input_features):
+        """Initialize the input feature transformer based on a list 
+        of feature expressions.  Features may simply be selected 
+        inputs ['x0', 'x1', 'u0', ... etc.] or may include expressions of
+        current inputs such as 'x0**2' and 'x1*u0' (the available input 
+        names is defined by the lengths of self.xin_names and 
+        self.uin_names).
+
+        Parameters
+        ----------
+        input_features : list of strings
+            Features and feature-expressions to be used by the model.
+        """
+        feature_function = partial(feature_dataframe_from_expressions,
+                                   expressions=input_features)
+        input_transformer = FunctionTransformer(feature_function, validate=False)
+        return input_transformer
+
+    def fit(self, inputs, dxdt):
+        """Fit linear model to features.
+        """
+        # TODO: Allow arrays too?
+        assert isinstance(inputs, pd.DataFrame)
+        assert isinstance(dxdt, pd.DataFrame)
+
+        # Re-label inputs as 'x0', 'x1', 'u0', etc.
+        input_names = self.xin_names + self.uin_names
+        rename_map = {**self._xin_rename_map, **self._uin_rename_map}
+        inputs = inputs[input_names].rename(columns=rename_map)
+        dxdt = dxdt[self.dxdt_names]
+
+        # Note: Can't use scikit learn Pipeline because it doesn't
+        # support transformations to outputs (y)
+        if self.input_transformer:
+            inputs = self.input_transformer.fit_transform(inputs)
+        if self.input_scaler:
+            inputs = self.input_scaler.fit_transform(inputs.values.astype(np.float))
+        if self.output_scaler:
+            dxdt = self.output_scaler.fit_transform(dxdt.values.astype(np.float))
+        self.estimator.fit(inputs, dxdt)
+
+    def predict(self, inputs):
+        """Predict using the model.  If inputs is a DataFrame with 
+        named columns (input data vectors in rows) then the predicted 
+        dxdt-values are returned as a DataFrame with named columns.
+
+        If inputs is a dict, list, Series, or 1-d array, it is assumed 
+        to represent one data point and the dxdt prediction is 
+        returned as a dictionary.
+
+        Example 1:
+        >>> xin_names = ['x_1', 'x_2']
+        >>> dxdt_names = ['dx_1/dt', 'dx_2/dt']
+        >>> model = NonLinearDynamicSystem(xin_names, yin_names, uin_names=None)
+        >>> model.fit(inputs, dxdt)  # inputs, dxdt are dataframes with named columns
+        >>> model.predict(inputs)
+                dx_1/dt  dx_2/dt
+        0 -2.664535e-15      2.0
+        1  1.000000e+00      2.0
+        2  2.000000e+00      5.0
+        3  3.000000e+00      5.0
+        4  4.000000e+00     10.0
+        5  6.000000e+00     10.0
+
+        Example 2:
+        >>> x = {'x_1': 2, 'x_2': 2}
+        >>> model.predict(x)
+        {'dx_1/dt': 2.0, 'dx_2/dt': 5.0}
+        """
+        # TODO: Replace examples with one with control inputs
+
+        if isinstance(inputs, (dict, pd.Series)):
+            # This is 50 times faster than when passing one data
+            # point as a dataframe.
+            # Re-label inputs as 'x0', 'x1', 'u0', etc.
+            rename_map = {**self._xin_rename_map, **self._uin_rename_map}
+            input_values = {rename_map[k]: v for k, v in inputs.items()}
+            #TODO: Should be checking keys!
+            ref_dict = {**input_values, **self.functions}
+            # Calculate evaluated features
+            x = [eval(expr, ref_dict) for expr in self.input_features]
+            x = np.array(x, dtype=np.float).reshape(1, -1)
+            if self.input_scaler:
+                # Re-scale inputs
+                x = self.input_scaler.transform(x)
+            dxdt_values = self.estimator.predict(x).reshape(-1)
+            if self.output_scaler:
+                # Re-scale outputs
+                dxdt_values = self.output_scaler.inverse_transform(y_values)
+            return dict(zip(self.dxdt_names, dxdt_values))
+        elif isinstance(inputs, pd.DataFrame):
+            # Re-label inputs as 'x0', 'x1', 'u0', etc.
+            index = inputs.index
+            input_names = self.xin_names + self.uin_names
+            rename_map = {**self._xin_rename_map, **self._uin_rename_map}
+            inputs = inputs[input_names].rename(columns=rename_map)
+            if self.input_transformer:
+                inputs = self.input_transformer.transform(inputs)
+            if self.input_scaler:
+                # Apply the scaling to input data
+                inputs = self.input_scaler.transform(inputs.values.astype(np.float))
+            dxdt = self.estimator.predict(inputs)
+            if self.output_scaler:
+                # Reverse the scaling on output predictions
+                dxdt = self.output_scaler.inverse_transform(dxdt)
+            return pd.DataFrame(dxdt, index=index, columns=self.dxdt_names)
+        else:
+            input_names = self.xin_names + self.uin_names
+            inputs = dict(zip(input_names, inputs))
+            return self.predict(inputs)
+
+    # TODO: Sub-classes for FP model and include dydt functions for trajectory prediction

@@ -11,7 +11,7 @@ from sklearn.metrics import r2_score
 # Classes/functions to test
 from dynopt.models.models import Model, NonLinearModel, SparseNonLinearModel, \
                                  SVRMultipleOutputs, LinearPredictionModel, \
-                                 DynamicSystem
+                                 DynamicSystem, NonLinearDynamicSystem
 
 
 class ModelTests(unittest.TestCase):
@@ -64,13 +64,14 @@ class ModelTests(unittest.TestCase):
         prediction = model.predict(X_test)
         test_prediction = pd.DataFrame(test_prediction.reshape(-1, 1), 
                                        columns=['y0'])
-        assert_array_equal(prediction, test_prediction)
+        assert_array_almost_equal(prediction, test_prediction)
 
         # Test single predictions
         for i in X.index:
             x = {k: v for k, v in zip(model.x_names, X.loc[i].values)}
             y_pred = model.predict(x)
-            assert_array_equal(np.array(list(y_pred.values())), y.loc[i].values)
+            assert_array_almost_equal(np.array(list(y_pred.values())), 
+                                      y.loc[i].values)
 
     def test_NonLinearModel_linear(self):
 
@@ -527,7 +528,7 @@ class ModelTests(unittest.TestCase):
         prediction = model.predict(inputs_test)
         test_prediction = pd.DataFrame(test_prediction.reshape(-1, 1), 
                                        columns=['dxdt0'])
-        assert_array_equal(prediction, test_prediction)
+        assert_array_almost_equal(prediction, test_prediction)
 
         # Test single predictions
         for i in inputs.index:
@@ -536,6 +537,66 @@ class ModelTests(unittest.TestCase):
             dxdt_pred = model.predict(x)
             assert_array_almost_equal(np.array(list(dxdt_pred.values())), 
                                                dxdt.loc[i].values)
+
+    def test_NonlinearDynamicSystem(self):
+
+        # Simulate a non-linear system of ODEs:
+        # dx1_dt = x2 - 2*x1 + x2**2
+        # dx2_dt = 1 + x1**2
+        f1 = lambda x1, x2: x2 - 2 * x1 + x1**2
+        f2 = lambda x1, x2: 1 + x1**2
+ 
+        # Input data samples
+        inputs = np.array([[1, 1], [1, 2], [2, 2], [2, 3], [3, 3]])
+
+        # Target values (LHS of above eq.ns)
+        dxdt = np.array([[f1(*x), f2(*x)] for x in inputs]).astype(float)
+
+        # Initialize model
+        xin_names = ['x_1', 'x_2']  # You can use any name
+        dxdt_names = ['dx_1/dt', 'dx_2/dt']
+        input_features = ['x0', 'x1', 'x0**2']
+        model = NonLinearDynamicSystem(xin_names, dxdt_names, 
+                                       input_features=input_features)
+        self.assertTrue(str(model).startswith("NonLinearDynamicSystem"))
+
+        # Fit model to data
+        inputs = pd.DataFrame(inputs, columns=xin_names)
+        dxdt = pd.DataFrame(dxdt, columns=dxdt_names)
+        model.fit(inputs, dxdt)
+
+        test_coef_ = pd.DataFrame(
+            {'x0': [-2, 0], 'x1': [1, 0], 'x0**2': [1, 1]}, 
+            index=['dxdt0', 'dxdt1']
+        ).astype(float)
+        assert_frame_equal(model.coef_, test_coef_)
+
+        test_intercept_ = pd.Series({'dxdt0': 0., 'dxdt1': 1.})
+        assert_series_equal(model.intercept_, test_intercept_)
+
+        # Test predictions
+        assert_frame_equal(model.predict(inputs), dxdt)
+
+        # Test R^2 calculation
+        score = model.score(inputs, dxdt)
+        self.assertEqual(score, 1.0)
+
+        # Test parameter count
+        self.assertEqual(model.n_params, 8)
+
+        # Test single-point predictions with dicts, series, etc.
+        x2 = inputs.loc[2].to_dict()
+        y2 = {'dx_1/dt': 2.0, 'dx_2/dt': 5.0}  # Y.loc[2].to_dict()
+        assert_series_equal(pd.Series(model.predict(x2)), pd.Series(y2))
+
+        x2 = inputs.loc[2]  # pd.Series
+        assert_series_equal(pd.Series(model.predict(x2)), pd.Series(y2))
+
+        x2 = inputs.loc[2].values  # np.ndarray
+        assert_series_equal(pd.Series(model.predict(x2)), pd.Series(y2))
+
+        x2 = inputs.loc[2].tolist()  # list
+        assert_series_equal(pd.Series(model.predict(x2)), pd.Series(y2))
 
     def test_LinearPredictionModel(self):
 
@@ -546,11 +607,17 @@ class ModelTests(unittest.TestCase):
         intercepts = np.array([ 0.04856, -0.0038 ])
 
         model = LinearPredictionModel(coef=coefficients, intercept=intercepts)
-        self.assertTrue(str(model).startswith("LinearPredictionModel"))
-        param_names = list(model.get_params().keys())
-        self.assertEqual(param_names, ['coef', 'intercept'])
-        model.set_params(coef=coefficients*2, intercept=intercepts+1)
-        #TODO: This method does not work (sets model.coef, model.intercept)
+        # TODO: Any of these methods call model.get_params which raises
+        # FutureWarning: From version 0.24, get_params will raise an AttributeError
+        # if a parameter cannot be retrieved as an instance attribute. Previously 
+        # it would return None.
+        # Probably should look more closely at how LinearRegression.fit sets
+        # coef_ and intercept_ and try to copy it more closely...
+        #self.assertTrue(str(model).startswith("LinearPredictionModel"))
+        #param_names = list(model.get_params().keys())
+        #self.assertEqual(param_names, ['coef', 'intercept'])
+        #model.set_params(coef=coefficients*2, intercept=intercepts+1)
+        #TODO: This method does not work (sets model.coef, model.intercept instead)
         #assert_array_equal(model.coef_, coefficients*2)
         #assert_array_equal(model.intercept_, intercepts+1)
 
