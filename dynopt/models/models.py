@@ -33,10 +33,10 @@ class Model:
     have named columns to identify each data series.
 
     The benefit of this approach is that you can easily automate
-    model design, testing and evaluation without having to re-
-    configure input and output data sets (the model instances 
-    only use the relevant data they require for training and
-    prediction).
+    model design, fitting, testing and evaluation without having
+    to re-configure input and output data sets (the model 
+    instances only use the relevant data they require for 
+    training and prediction).
 
     Parameters
     ----------
@@ -45,7 +45,7 @@ class Model:
     y_names : list of strings,
         Names of model output variables (predictions).
     estimator : LinearRegression, Lasso, MLPRegressor or similar
-        Estimator model to be used to fit the (transformed) features.
+        Estimator model to be used to fit the input-output data.
         If not specified, a LinearRegression instance is created.
     scale_inputs : boolean, optional, default False
         If True, the regressors (X) will be standardized before
@@ -84,8 +84,8 @@ class Model:
         self.kwarg_names = ['estimator']
         self.class_name = 'Model'
 
-    #TODO: Rename parameters x_names, y_names, and x_features with trailing
-    # underscore as per scikit-learn convention
+    #TODO: Rename parameters x_names, y_names with trailing underscore
+    # as per scikit-learn convention
 
     def get_params(self, deep=True):
         """Get parameters for this estimator."""
@@ -131,7 +131,7 @@ class Model:
         X = X[self.x_names]
         y = y[self.y_names]
 
-        # Note: Can't use scikit learn Pipeline becuase it doesn't
+        # Note: Can't use scikit learn Pipeline because it doesn't
         # support transformations to outputs (y)
         if self.input_scaler:
             X = self.input_scaler.fit_transform(X.values.astype(np.float))
@@ -141,7 +141,7 @@ class Model:
 
     def predict(self, X):
         """Predict using the model.  If X is a DataFrame with named
-        columns (x-data points in rows) then the predicted y-values
+        columns (x-data vectors in rows) then the predicted y-values
         are returned as a DataFrame with named columns.
 
         If X is a dict, list, Series, or 1-d array, it is assumed 
@@ -174,6 +174,7 @@ class Model:
             # TODO: This is a big speed improvement but complex...
             if isinstance(X, dict):
                 x = np.array(list(X.values()), dtype=np.float).reshape(1, -1)
+                #TODO: Should be checking keys!
             else:
                 x = X.values.reshape(1, -1)
             if self.input_scaler:
@@ -204,9 +205,9 @@ class Model:
         """Returns the coefficient of determination R^2 of the
         prediction.
         """
-        y_selected = y[self.y_names]
+        y = y[self.y_names]
         y_pred = self.predict(X)
-        return r2_score(y_selected, y_pred, sample_weight=sample_weight,
+        return r2_score(y, y_pred, sample_weight=sample_weight,
                         multioutput='uniform_average')
 
     def __repr__(self):
@@ -225,10 +226,11 @@ class NonLinearModel(Model):
     models and to identify sparse non-linear models that have
     only a few active terms.
 
-    The benefit of these model classes is that they have an internal
-    representation of the features they are designed to use and 
-    will only use the data for those features, even if you pass
-    other data.
+    The benefit of this approach is that you can easily automate
+    model design, fitting, testing and evaluation without having
+    to re-configure input and output data sets (the model 
+    instances only use the relevant data they require for 
+    training and prediction).
 
     Example:
     >>> import numpy as np
@@ -272,7 +274,7 @@ class NonLinearModel(Model):
     y_names : list of strings,
         Names of model output variables (predictions).
     estimator : class
-        Estimator model to be used to fit the (transformed) features.
+        Estimator model to be used to fit the input-output data.
         If not specified, a LinearRegression instance used.
     x_features : list of strings, optional
         List of feature expressions.  Features may simply be
@@ -387,7 +389,7 @@ class NonLinearModel(Model):
         X = X[self.x_names].rename(columns=self._x_rename_map)
         y = y[self.y_names]
 
-        # Note: Can't use scikit learn Pipeline becuase it doesn't
+        # Note: Can't use scikit learn Pipeline because it doesn't
         # support transformations to outputs (y)
         if self.input_transformer:
             X = self.input_transformer.fit_transform(X)
@@ -399,7 +401,7 @@ class NonLinearModel(Model):
 
     def predict(self, X):
         """Predict using the model.  If X is a DataFrame with named
-        columns (x-data points in rows) then the predicted y-values
+        columns (x-data vectors in rows) then the predicted y-values
         are returned as a DataFrame with named columns.
 
         If X is a dict, list, Series, or 1-d array, it is assumed 
@@ -432,6 +434,7 @@ class NonLinearModel(Model):
             # TODO: This is a big speed improvement but complex...
             # Re-label inputs as 'x0', 'x1', etc.
             x_values = {self._x_rename_map[k]: v for k, v in X.items()}
+            #TODO: Should be checking keys!
             ref_dict = {**x_values, **self.functions}
             # Calculate evaluated features
             x = [eval(expr, ref_dict) for expr in self.x_features]
@@ -466,7 +469,13 @@ class NonLinearModel(Model):
 
 
 class SparseNonLinearModel(NonLinearModel):
-    """Model interface to identify sparse non-linear models. 
+    """Model interface to identify sparse non-linear models using
+    the Sparse Identification of Non-Linear Dynamics (SINDy)
+    algorithm.
+
+    See Paper 'Discovering Governing Equations from Data: Sparse
+    Identification of Nonlinear Dynamical Systems' by 
+    S. L. Brunton, J. L. Proctor, and J. N. Kutz.
 
     Example:
     >>> import numpy as np
@@ -509,7 +518,7 @@ class SparseNonLinearModel(NonLinearModel):
     y_names : list of strings,
         Names of model output variables (predictions).
     estimator : class
-        Estimator model to be used to fit the (transformed) features.
+        Estimator model to be used to fit the input-output data.
         If not specified, a LinearRegression instance used.
     custom_features : list of strings, optional
         List of feature expressions to include in addition to the
@@ -533,9 +542,6 @@ class SparseNonLinearModel(NonLinearModel):
     def __init__(self, x_names, y_names, estimator=None, custom_features=None,
                  poly_order=3, threshold=None, scale_inputs=False, 
                  scale_outputs=False, *args, **kwargs):
-        #if scale_inputs is True:
-        # TODO: Need to see how this works first
-        #    raise NotImplementedError()
         super().__init__(x_names, y_names, estimator=estimator,
                          x_features=None, scale_inputs=scale_inputs,
                          scale_outputs=scale_outputs, *args, **kwargs)
@@ -767,6 +773,7 @@ class LinearPredictionModel(LinearRegression):
     intercept_ : float or array of shape of (n_targets,)
         Independent term in the linear model.
     """
+    #TODO: Is this actually needed?
 
     def __init__(self, coef=None, intercept=None):
         if coef is not None:
@@ -785,3 +792,207 @@ class LinearPredictionModel(LinearRegression):
     def fit(self, X, y):
         """This model does not have a fit method."""
         raise NotImplementedError("model is only for prediction")
+
+
+class DynamicSystem(Model):
+    """Model interface for running dynamical system identification
+    and model evaluation experiments with time-series data.  The 
+    interface provides a convenient means to generate and fit 
+    models to different combinations of data inputs and outputs by
+    using Pandas dataframes which have named columns to identify 
+    each data series.
+
+    The benefit of this approach is that you can easily automate
+    model design, identification, testing and evaluation without 
+    having to re-configure input and output data sets (the model 
+    instances only use the relevant data they require for training and
+    prediction).
+
+    Parameters
+    ----------
+    xin_names : list of strings,
+        Names of input state variables (x).
+    uin_names : list of strings,
+        Names of control input variables (u).
+    dxdt_names : list of strings,
+        Names of state derivatives variables (system outputs).
+    estimator : LinearRegression, Lasso, MLPRegressor or similar
+        Estimator model to be used to fit the input-output data.
+        If not specified, a LinearRegression instance is created.
+    scale_inputs : boolean, optional, default False
+        If True, the inputs (xin, uin) will be standardized before
+        model-fitting by subtracting the mean and dividing by the
+        l2-norm.  See Scikit-Learn documentation for StandardScaler.
+    scale_outputs : boolean, optional, default False
+        If True, the outputs (dxdt) will be standardized before
+        model-fitting by subtracting the mean and dividing by the
+        l2-norm.  See Scikit-Learn documentation for StandardScaler.
+    """
+
+    def __init__(self, xin_names, dxdt_names, uin_names=None, estimator=None,
+                 scale_inputs=None, scale_outputs=None, *args, **kwargs):
+        self._xin_names = None
+        self._xin_labels = None
+        self._xin_rename_map = None
+        self._uin_names = None
+        self._uin_labels = None
+        self._uin_rename_map = None
+        self._dxdt_names = None
+        self._dxdt_labels = None
+        self._dxdt_rename_map = None
+        self.xin_names = list(xin_names)
+        self.uin_names = list(uin_names)
+        self.dxdt_names = list(dxdt_names)
+        if scale_inputs:
+            input_scaler = StandardScaler()
+        else:
+            input_scaler = None
+        if scale_outputs:
+            output_scaler = StandardScaler()
+        else:
+            output_scaler = None
+        if estimator is None:
+            estimator = LinearRegression(*args, **kwargs)
+        self.input_scaler = input_scaler
+        self.output_scaler = output_scaler
+        self.estimator = estimator
+        self.arg_names = ['xin_names', 'uin_names', 'dxdt_names']
+        self.kwarg_names = ['estimator']
+        self.class_name = 'DynamicSystem'
+
+    #TODO: Rename xin_names, uin_names, dxdt_names, and input_features with
+    # trailing underscore as per scikit-learn convention
+
+    def get_params(self, deep=True):
+        """Get parameters for this estimator."""
+        return {"xin_names": self.xin_names, "uin_names": self.uin_names, 
+                "dxdt_names": self.dxdt_names, "estimator": self.estimator}
+
+    @property
+    def xin_names(self):
+        return self._xin_names
+
+    @xin_names.setter
+    def xin_names(self, value):
+        self._xin_names = value
+        self._xin_labels = [f'x{i}' for i in range(len(value))]
+        self._xin_rename_map = dict(zip(value, self._xin_labels))
+
+    @property
+    def uin_names(self):
+        return self._uin_names
+
+    @uin_names.setter
+    def uin_names(self, value):
+        self._uin_names = value
+        self._uin_labels = [f'u{i}' for i in range(len(value))]
+        self._uin_rename_map = dict(zip(value, self._uin_labels))
+
+    @property
+    def dxdt_names(self):
+        """The names of the output variables (dx/dt)."""
+        return self._dxdt_names
+
+    @dxdt_names.setter
+    def dxdt_names(self, value):
+        self._dxdt_names = value
+        self._dxdt_labels = [f'dxdt{i}' for i in range(len(value))]
+        self._dxdt_rename_map = dict(zip(value, self._dxdt_labels))
+
+    def fit(self, inputs, outputs):
+        """Fit linear model to features.
+        """
+        # TODO: Allow arrays too?
+        assert isinstance(inputs, pd.DataFrame)
+        assert isinstance(outputs, pd.DataFrame)
+
+        # Select required data
+        inputs = inputs[self.xin_names + self.uin_names]
+        outputs = outputs[self.dxdt_names]
+
+        # Note: Can't use scikit learn Pipeline because it doesn't
+        # support transformations to outputs
+        if self.input_scaler:
+            inputs = self.input_scaler.fit_transform(inputs.values.astype(np.float))
+        if self.output_scaler:
+            outputs = self.output_scaler.fit_transform(outputs.values.astype(np.float))
+        self.estimator.fit(inputs, outputs)
+
+    def predict(self, inputs):
+        """Predict using the model.  If inputs is a DataFrame with named
+        columns (input data vectors in rows) then the output values are 
+        returned as a DataFrame with named columns.
+
+        If inputs is a dict, list, Series, or 1-d array, it is assumed 
+        to represent one input data point and the output-prediction is 
+        returned as a dictionary.
+
+        Example 1:
+        >>> xin_names = ['x_1', 'x_2']
+        >>> dxdt_names = ['dx_1/dt', 'dx_2/dt']
+        >>> model = DynamicalSystem(xin_names, dxdt_names)
+        >>> model.fit(inputs, outputs)  # inputs, outputs are dataframes with named columns
+        >>> model.predict(inputs)
+                dx_1/dt  dx_2/dt
+        0 -2.664535e-15      2.0
+        1  1.000000e+00      2.0
+        2  2.000000e+00      5.0
+        3  3.000000e+00      5.0
+        4  4.000000e+00     10.0
+        5  6.000000e+00     10.0
+
+        Example 2:
+        >>> x = {'x_1': 2, 'x_2': 2}
+        >>> model.predict(x)
+        {'dx_1/dt': 2.0, 'dx_2/dt': 5.0}
+        """
+
+        if isinstance(inputs, (dict, pd.Series)):
+            # This is 50 times faster than when passing one data
+            # point as a dataframe.
+            if isinstance(inputs, dict):
+                x = np.array(list(inputs.values()), dtype=np.float).reshape(1, -1)
+            else:
+                #TODO: Should be checking keys!
+                x = inputs.values.reshape(1, -1)
+            if self.input_scaler:
+                # Re-scale inputs
+                x = self.input_scaler.transform(x)
+            dxdt_values = self.estimator.predict(x).reshape(-1)
+            if self.output_scaler:
+                # Re-scale outputs
+                dxdt_values = self.output_scaler.inverse_transform(dxdt_values)
+            return dict(zip(self.dxdt_names, dxdt_values))
+        elif isinstance(inputs, pd.DataFrame):
+            # Re-label inputs as 'x0', 'x1', 'u1', ... etc.
+            index = inputs.index
+            inputs = inputs[self.xin_names + self.uin_names]
+            inputs = inputs.rename(columns={**self._xin_rename_map,
+                                            **self._uin_rename_map})
+            if self.input_scaler:
+                # Apply the scaling to input data
+                inputs = self.input_scaler.transform(inputs.values.astype(np.float))
+            dxdt = self.estimator.predict(inputs)
+            if self.output_scaler:
+                # Reverse the scaling on outputs
+                dxdt = self.output_scaler.inverse_transform(dxdt)
+            return pd.DataFrame(dxdt, index=index, columns=self.dxdt_names)
+        else:
+            inputs = dict(zip(self.x_names, inputs))
+            return self.predict(inputs)
+
+    def score(self, inputs, dxdt, sample_weight=None):
+        """Returns the coefficient of determination R^2 of the
+        prediction.
+        """
+        dxdt = dxdt[self.dxdt_names]
+        dxdt_pred = self.predict(inputs)
+        return r2_score(dxdt, dxdt_pred, sample_weight=sample_weight,
+                        multioutput='uniform_average')
+
+    def __repr__(self):
+        all_args = [self.__getattribute__(a).__repr__() for a in self.arg_names] + \
+                   [f"{a}={self.__getattribute__(a).__repr__()}"
+                    for a in self.kwarg_names
+                    if self.__getattribute__(a) is not None]
+        return f"{self.class_name}({', '.join(all_args)})"

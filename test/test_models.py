@@ -10,7 +10,8 @@ from sklearn.metrics import r2_score
 
 # Classes/functions to test
 from dynopt.models.models import Model, NonLinearModel, SparseNonLinearModel, \
-                                 SVRMultipleOutputs, LinearPredictionModel
+                                 SVRMultipleOutputs, LinearPredictionModel, \
+                                 DynamicSystem
 
 
 class ModelTests(unittest.TestCase):
@@ -69,7 +70,7 @@ class ModelTests(unittest.TestCase):
         for i in X.index:
             x = {k: v for k, v in zip(model.x_names, X.loc[i].values)}
             y_pred = model.predict(x)
-            assert_array_equal(np.array(np.array(list(y_pred.values()))), y.loc[i].values)
+            assert_array_equal(np.array(list(y_pred.values())), y.loc[i].values)
 
     def test_NonLinearModel_linear(self):
 
@@ -196,6 +197,97 @@ class ModelTests(unittest.TestCase):
 
         x2 = X.loc[2].tolist()  # list
         assert_series_equal(pd.Series(model.predict(x2)), pd.Series(y2))
+
+    def test_NonlinearModel_with_scaling(self):
+        # Simple test: y = 1 * x_0 + 200 * x_1 + 3
+        X = np.array([[100, 1], [100, 2], [200, 2], [200, 3]])
+        y = np.dot(X, np.array([1, 200])) + 300
+        X_test = np.array([[300, 5], [400, 2] ])
+        y_test = np.dot(X_test, np.array([1, 200])) + 300
+
+        # Make sure it replicates Scikit-Learn's LinearRegression model
+        reg = LinearRegression().fit(X, y)
+        test_coef_ = reg.coef_
+        test_intercept_ = reg.intercept_
+        test_prediction = reg.predict(X_test)
+
+        # Initialize model
+        x_names = ['x_0', 'x_1']
+        y_names = ['y']
+        X = pd.DataFrame(X, columns=x_names)
+        X_test = pd.DataFrame(X_test, columns=x_names)
+        y = pd.DataFrame(y, columns=y_names)
+        model = NonLinearModel(x_names, y_names)
+        model_scaled1 = NonLinearModel(x_names, y_names, scale_inputs=True)
+        model_scaled2 = NonLinearModel(x_names, y_names, scale_inputs=True,
+                                       scale_outputs=True)
+        self.assertIsInstance(model.estimator, LinearRegression)
+        self.assertEqual(model._x_labels, ['x0', 'x1'])
+        self.assertEqual(model._x_rename_map, {'x_0': 'x0', 'x_1': 'x1'})
+        self.assertEqual(model.x_features, ['x0', 'x1'])  # No non-linear features
+        self.assertEqual(model._y_labels, ['y0'])
+        self.assertEqual(model._y_rename_map, {'y': 'y0'})
+        self.assertTrue(model.input_transformer is not None)
+        self.assertTrue(model.input_scaler is None)
+        self.assertTrue(model_scaled1.input_scaler is not None)
+        self.assertTrue(model_scaled2.input_scaler is not None)
+        self.assertTrue(model_scaled2.output_scaler is not None)
+
+        # Fit models to data
+        model.fit(X, y)
+        model_scaled1.fit(X, y)
+        model_scaled2.fit(X, y)
+
+        # Test input scaler attributes
+        scaler = model_scaled1.input_scaler
+        assert_array_almost_equal(scaler.scale_, X.values.std(axis=0))
+        assert_array_almost_equal(scaler.mean_, X.values.mean(axis=0))
+        scaler = model_scaled2.input_scaler
+        assert_array_almost_equal(scaler.scale_, X.values.std(axis=0))
+        assert_array_almost_equal(scaler.mean_, X.values.mean(axis=0))
+
+        # Test output scaler attributes
+        scaler = model_scaled2.output_scaler
+        assert_array_almost_equal(scaler.scale_, y.values.std(axis=0))
+        assert_array_almost_equal(scaler.mean_, y.values.mean(axis=0))
+
+        # Test model parameters
+        assert_array_almost_equal(model.estimator.coef_[0], test_coef_)
+        self.assertAlmostEqual(model.estimator.intercept_[0], test_intercept_)
+        assert_array_almost_equal(model_scaled1.estimator.coef_[0], [50., 141.42135624])
+        self.assertAlmostEqual(model_scaled1.estimator.intercept_[0], y.mean()[0])
+        self.assertFalse(np.isclose(model_scaled1.estimator.coef_[0], test_coef_).all())
+        self.assertFalse(np.isclose(model_scaled1.estimator.intercept_[0], 
+                                    test_intercept_).all())
+        self.assertAlmostEqual(model_scaled2.estimator.intercept_[0], 0)
+        assert_array_almost_equal(model_scaled2.estimator.coef_[0], [0.27735, 0.784465])
+        self.assertFalse(np.isclose(model_scaled1.estimator.coef_[0], 
+                                    model_scaled2.estimator.coef_[0]).all())
+        self.assertFalse(np.isclose(model_scaled1.estimator.intercept_[0], 
+                                    model_scaled2.estimator.intercept_[0]).all())
+
+        # Test predictions
+        test_prediction = reg.predict(X_test)
+        prediction = model.predict(X_test)['y'].values
+        assert_array_almost_equal(prediction, y_test)
+        prediction = model_scaled1.predict(X_test)['y'].values
+        assert_array_almost_equal(prediction, y_test)
+        prediction = model_scaled2.predict(X_test)['y'].values
+        assert_array_almost_equal(prediction, y_test)
+
+        # Test R-squared estimates
+        test_score = reg.score(X, y)
+        self.assertEqual(model.score(X, y), test_score)
+        self.assertEqual(model_scaled1.score(X, y), test_score)
+        self.assertEqual(model_scaled2.score(X, y), test_score)
+
+        # Test single predictions
+        models = [model, model_scaled1, model_scaled2]
+        for i in X_test.index:
+            for model in models:
+                x = {k: v for k, v in zip(model.x_names, X_test.loc[i].values)}
+                y_pred = model.predict(x)
+                self.assertAlmostEqual(y_pred['y'], y_test[i])
 
     def test_SparseNonLinearModel(self):
 
@@ -376,96 +468,74 @@ class ModelTests(unittest.TestCase):
         assert_series_equal(pd.Series(model.predict(x2)), 
                             pd.Series(y2), check_less_precise=True)
 
-    def test_NonlinearModel_with_scaling(self):
-        # Simple test: y = 1 * x_0 + 200 * x_1 + 3
-        X = np.array([[100, 1], [100, 2], [200, 2], [200, 3]])
-        y = np.dot(X, np.array([1, 200])) + 300
-        X_test = np.array([[300, 5], [400, 2] ])
-        y_test = np.dot(X_test, np.array([1, 200])) + 300
+    def test_DynamicSystem(self):
 
-        # Make sure it replicates Scikit-Learn's LinearRegression model
-        reg = LinearRegression().fit(X, y)
-        test_coef_ = reg.coef_
-        test_intercept_ = reg.intercept_
-        test_prediction = reg.predict(X_test)
+        # Simulate a simple linear dynamical system:
+        # dx/dt = -0.5x + u
+        f = lambda x, u: -0.5*x + u
+ 
+        # Input data samples
+        inputs = np.array([[1 , 1], [1.5, 1], [1.75, 1], [1.875, 1], [1.9375, 1]])
+
+        # Target values (LHS of above equation)
+        dxdt = np.array([f(x, u) for x, u in inputs]).astype(float)
 
         # Initialize model
-        x_names = ['x_0', 'x_1']
-        y_names = ['y']
-        X = pd.DataFrame(X, columns=x_names)
-        X_test = pd.DataFrame(X_test, columns=x_names)
-        y = pd.DataFrame(y, columns=y_names)
-        model = NonLinearModel(x_names, y_names)
-        model_scaled1 = NonLinearModel(x_names, y_names, scale_inputs=True)
-        model_scaled2 = NonLinearModel(x_names, y_names, scale_inputs=True,
-                                       scale_outputs=True)
+        xin_names = ['velocity']
+        uin_names = ['force']
+        dxdt_names = ['acceleration']
+        input_names = xin_names + uin_names
+        inputs = pd.DataFrame(inputs, columns=input_names)
+        dxdt = pd.DataFrame(dxdt, columns=dxdt_names)
+        model = DynamicSystem(xin_names, dxdt_names, uin_names=uin_names)
+        self.assertTrue(str(model).startswith("DynamicSystem"))
+
+        # Additional test data
+        inputs_test = np.array([[1.96875, 1], [1.984375, 1]])
+        dxdt_test = np.array([f(x, u) for x, u in inputs_test]).astype(float)
+        inputs_test = pd.DataFrame(inputs_test, columns=input_names)
+        dxdt_test = pd.DataFrame(dxdt_test, columns=dxdt_names)
+
+        # Make sure it replicates Scikit-Learn's LinearRegression model
+        reg = LinearRegression().fit(inputs, dxdt)
+        test_coef_ = reg.coef_
+        test_intercept_ = reg.intercept_
+        test_score = reg.score(inputs, dxdt)
+        test_prediction = reg.predict(inputs_test)
+
         self.assertIsInstance(model.estimator, LinearRegression)
-        self.assertEqual(model._x_labels, ['x0', 'x1'])
-        self.assertEqual(model._x_rename_map, {'x_0': 'x0', 'x_1': 'x1'})
-        self.assertEqual(model.x_features, ['x0', 'x1'])  # No non-linear features
-        self.assertEqual(model._y_labels, ['y0'])
-        self.assertEqual(model._y_rename_map, {'y': 'y0'})
-        self.assertTrue(model.input_transformer is not None)
-        self.assertTrue(model.input_scaler is None)
-        self.assertTrue(model_scaled1.input_scaler is not None)
-        self.assertTrue(model_scaled2.input_scaler is not None)
-        self.assertTrue(model_scaled2.output_scaler is not None)
+        self.assertEqual(model._xin_labels, ['x0'])
+        self.assertEqual(model._uin_labels, ['u0'])
+        self.assertEqual(model._dxdt_labels, ['dxdt0'])
+        self.assertEqual(model._xin_rename_map, {'velocity': 'x0'})
+        self.assertEqual(model._uin_rename_map, {'force': 'u0'})
+        self.assertEqual(model._dxdt_rename_map, {'acceleration': 'dxdt0'})
+        params = model.get_params()
+        self.assertEqual(params, {"xin_names": xin_names, "uin_names": uin_names, 
+                                  "dxdt_names": dxdt_names, "estimator": model.estimator})
 
-        # Fit models to data
-        model.fit(X, y)
-        model_scaled1.fit(X, y)
-        model_scaled2.fit(X, y)
+        # Fit model to data
+        model.fit(inputs, dxdt)
+        assert_array_equal(model.estimator.coef_, test_coef_)
+        assert_array_equal(model.estimator.intercept_, test_intercept_)
 
-        # Test input scaler attributes
-        scaler = model_scaled1.input_scaler
-        assert_array_almost_equal(scaler.scale_, X.values.std(axis=0))
-        assert_array_almost_equal(scaler.mean_, X.values.mean(axis=0))
-        scaler = model_scaled2.input_scaler
-        assert_array_almost_equal(scaler.scale_, X.values.std(axis=0))
-        assert_array_almost_equal(scaler.mean_, X.values.mean(axis=0))
-
-        # Test output scaler attributes
-        scaler = model_scaled2.output_scaler
-        assert_array_almost_equal(scaler.scale_, y.values.std(axis=0))
-        assert_array_almost_equal(scaler.mean_, y.values.mean(axis=0))
-
-        # Test model parameters
-        assert_array_almost_equal(model.estimator.coef_[0], test_coef_)
-        self.assertAlmostEqual(model.estimator.intercept_[0], test_intercept_)
-        assert_array_almost_equal(model_scaled1.estimator.coef_[0], [50., 141.42135624])
-        self.assertAlmostEqual(model_scaled1.estimator.intercept_[0], y.mean()[0])
-        self.assertFalse(np.isclose(model_scaled1.estimator.coef_[0], test_coef_).all())
-        self.assertFalse(np.isclose(model_scaled1.estimator.intercept_[0], 
-                                    test_intercept_).all())
-        self.assertAlmostEqual(model_scaled2.estimator.intercept_[0], 0)
-        assert_array_almost_equal(model_scaled2.estimator.coef_[0], [0.27735, 0.784465])
-        self.assertFalse(np.isclose(model_scaled1.estimator.coef_[0], 
-                                    model_scaled2.estimator.coef_[0]).all())
-        self.assertFalse(np.isclose(model_scaled1.estimator.intercept_[0], 
-                                    model_scaled2.estimator.intercept_[0]).all())
+        # Test R^2 calculation
+        score = model.score(inputs, dxdt)
+        self.assertEqual(score, test_score)
 
         # Test predictions
-        test_prediction = reg.predict(X_test)
-        prediction = model.predict(X_test)['y'].values
-        assert_array_almost_equal(prediction, y_test)
-        prediction = model_scaled1.predict(X_test)['y'].values
-        assert_array_almost_equal(prediction, y_test)
-        prediction = model_scaled2.predict(X_test)['y'].values
-        assert_array_almost_equal(prediction, y_test)
-
-        # Test R-squared estimates
-        test_score = reg.score(X, y)
-        self.assertEqual(model.score(X, y), test_score)
-        self.assertEqual(model_scaled1.score(X, y), test_score)
-        self.assertEqual(model_scaled2.score(X, y), test_score)
+        prediction = model.predict(inputs_test)
+        test_prediction = pd.DataFrame(test_prediction.reshape(-1, 1), 
+                                       columns=['dxdt0'])
+        assert_array_equal(prediction, test_prediction)
 
         # Test single predictions
-        models = [model, model_scaled1, model_scaled2]
-        for i in X_test.index:
-            for model in models:
-                x = {k: v for k, v in zip(model.x_names, X_test.loc[i].values)}
-                y_pred = model.predict(x)
-                self.assertAlmostEqual(y_pred['y'], y_test[i])
+        for i in inputs.index:
+            input_names = model.xin_names + model.uin_names
+            x = {k: v for k, v in zip(input_names, inputs.loc[i].values)}
+            dxdt_pred = model.predict(x)
+            assert_array_almost_equal(np.array(list(dxdt_pred.values())), 
+                                               dxdt.loc[i].values)
 
     def test_LinearPredictionModel(self):
 
