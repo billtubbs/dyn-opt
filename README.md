@@ -60,8 +60,8 @@ print(X.head)
 # 4     18.7  396.90   5.33  
 ```
 
-The the input (x) and output (y) data that you want to use can now be identified 
-by their column names when initializing the model:
+The input (x) and output (y) data that you want to use can now be identified by 
+their column names when initializing the model:
 
 ```python
 # Select desired inputs and outputs
@@ -77,8 +77,8 @@ print(model)
 ```
 
 The model is then fitted in a similar way to Scikit-Learn models except that
-the whole data set can now be passed to the model and it will only use the 
-data columns it requires.
+the whole data set can now be passed to the model and it will only use the data 
+columns it requires.
 
 ```python
 # Fit model
@@ -90,8 +90,8 @@ print(model.score(X, y))
 # 0.6485147669915273
 ```
 
-Likewise, when predicting with the fitted model, only the relevant input data
-is used by the model.  The predicted output is a dataframe:
+Likewise, when predicting with the fitted model, only the relevant input data is 
+used by the model.  The predicted output is a dataframe:
 
 ```python
 print(model.predict(X.head()))
@@ -118,8 +118,8 @@ print(model.predict(x))
 The `NonLinearModel` class in [models.py](models.py) allows you to specify features
 as calculated expressions of the input data.
 
-The next two examples demonstrate how to use this feature to identify the non-linear
-dynamics of a simple pendulum from data.
+The next two examples demonstrate how to use this feature to identify the 
+non-linear dynamics of a simple pendulum from data.
 
 First we generate data by simulating a pendulum with two ordinary differential 
 equations describing its motion:
@@ -147,7 +147,7 @@ assert y.shape == (100, 2)
 
 The plot below shows how the pendulum states vary over time.
 
-<IMG SRC='images/pendulum-time-plot.png' WIDTH=600>
+<IMG SRC='images/pendulum-time-plot.png' WIDTH=500>
 
 Next, compute the derivatives that we want to predict:
 
@@ -173,8 +173,8 @@ x_features = ['x1', 'sin(x0)']
 model = NonLinearModel(x_names, y_names, x_features=x_features)
 ```
 
-Prepare pandas dataframes with the same names containing the input and 
-output data:
+Prepare pandas dataframes with the same names containing the input and output 
+data:
 
 ```python
 y = pd.DataFrame(dydt, columns=y_names)
@@ -216,10 +216,10 @@ original system equations above.
 ## Example 3 - Sparse Identification of Non-linear Dynamics
 
 The [Sparse Identification of Non-linear Dynamics algorithm (SINDy)][1] is a numerical 
-technique that automatically identifies non-linear relationships when the governing 
-equations of the system are sparse (i.e. when they have a few dominant terms).  When 
-this is the case, the SINDy algorithm finds a sparse approximation of the true 
-dynamics.  
+technique that automatically identifies unknown non-linear relationships when the 
+governing equations of the system are sparse (i.e. when they have a few dominant terms).  
+When this is the case, the SINDy algorithm finds a sparse approximation of the true 
+dynamics.
 
 Here, we use same data as in the previous example but this time we assume that we don't 
 exactly know the terms in the underlying equations.  Instead, we specify a polynomial
@@ -227,9 +227,9 @@ model order that we think will capture the true dynamics (2nd order here) as wel
 any additional non-linear terms we think may exist (e.g. sine, cosine functions).
 
 The `SparseNonLinearModel` class constructs a data library for all possible polynomial
-terms (x0, x1, x0*x1, x0**2, x1**2, ... etc.) as well as any additional terms specified,
-and then uses an iterative least-squares procedure to recursively eliminate terms that 
-are not significant.  
+terms (`x0`, `x1`, `x0*x1`, `x0**2`, `x1**2`, ... etc.) as well as any additional terms 
+specified, and then uses an iterative least-squares procedure to recursively eliminate 
+terms that are not significant.  
 
 A threshold parameter determines how many terms are eliminated:
 
