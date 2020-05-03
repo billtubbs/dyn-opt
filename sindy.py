@@ -48,13 +48,14 @@ def polynomial_features(y_in, order=3):
     return np.hstack(y_out_cols)
 
 
-def sparsify_dynamics_lstsq(theta, dxdt, lamb, n, max_iter=20):
+def sparsify_dynamics_lstsq(theta, y, lamb, max_iter=20):
     """SINDy algorithm to find sparse polynomial model
     of dynamics using ordinary least-squares.
     """
 
+    n_out = y.shape[1]
     # Initial guess: Least-squares
-    xi = np.linalg.lstsq(theta, dxdt, rcond=None)[0]
+    xi = np.linalg.lstsq(theta, y, rcond=None)[0]
 
     for _ in range(max_iter):
         # Find large coefficients above threshold
@@ -71,9 +72,9 @@ def sparsify_dynamics_lstsq(theta, dxdt, lamb, n, max_iter=20):
             )
 
         # Regress dynamics onto remaining terms to find sparse xi
-        for i in range(n):  # n is state dimension
+        for i in range(n_out):  # n is state dimension
             coefs_i = big_coefs[:, i]
-            xi[coefs_i, i] = np.linalg.lstsq(theta[:, coefs_i], dxdt[:, i],
+            xi[coefs_i, i] = np.linalg.lstsq(theta[:, coefs_i], y[:, i],
                                              rcond=None)[0]
 
     return xi
@@ -150,11 +151,14 @@ def polynomial_feature_labels(n_vars, poly_order, names=None,
                                for j in range(i, n_vars)]
 
     # Poly order 3
-    if poly_order >= 3:
+    if poly_order == 3:
         for i in range(n_vars):
             for j in range(i, n_vars):
                 labels = labels + ['*'.join([names[i], names[j], names[k]])
                                    for k in range(j, n_vars)]
+
+    if poly_order > 3:
+        raise NotImplementedError("poly_order up to 3 implemented")
 
     for name in names:
         old = f'{name}*{name}*{name}'

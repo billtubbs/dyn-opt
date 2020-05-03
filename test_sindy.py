@@ -109,7 +109,7 @@ class SindyTests(unittest.TestCase):
 
         # Estimate sparse dynamic model
         lamb = 0.025  # sparsification threshold lambda
-        xi = sparsify_dynamics_lstsq(theta, dx, lamb, n)
+        xi = sparsify_dynamics_lstsq(theta, dx, lamb)
         assert xi.shape == (20, 3)
 
         # Check result
@@ -125,7 +125,7 @@ class SindyTests(unittest.TestCase):
         # Estimate sparse dynamic model with lambda too high
         lamb = 1  # sparsification threshold lambda
         with self.assertRaises(ValueError):
-            xi = sparsify_dynamics_lstsq(theta, dx, lamb, n)
+            xi = sparsify_dynamics_lstsq(theta, dx, lamb)
 
 
 if __name__ == '__main__':
