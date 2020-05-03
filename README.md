@@ -147,7 +147,7 @@ assert y.shape == (100, 2)
 
 The plot below shows how the pendulum states vary over time.
 
-<IMG SRC='images/pendulum-time-plot.png' WIDTH=250>
+<IMG SRC='images/pendulum-time-plot.png' WIDTH=600>
 
 Next, compute the derivatives that we want to predict:
 
