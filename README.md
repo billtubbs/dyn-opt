@@ -4,7 +4,7 @@ and [dynamic optimization][3].
 
 ## Model Fitting
 
-The file [models.py](models.py) contains a class of models that provide a convenient
+The file [models.py](/dynopt/models/models.py) contains a class of models that provide a convenient
 interface for running model estimation and evaluation experiments with data.  They
 allow you to generate and fit [Scikit-learn](https://scikit-learn.org/stable/) estimators to data stored in Pandas 
 dataframes.  
@@ -115,7 +115,7 @@ print(model.predict(x))
 
 ## Example 2 - Non-Linear Model Estimation
 
-The `NonLinearModel` class in [models.py](models.py) allows you to specify features
+The `NonLinearModel` class in [models.py](/dynopt/models/models.py) allows you to specify features
 as calculated expressions of the input data.
 
 The next two examples demonstrate how to use this feature to identify the 
