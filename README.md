@@ -6,8 +6,8 @@ and [dynamic optimization][3].
 
 The file [models.py](/dynopt/models/models.py) contains a class of models that provide a convenient
 interface for running model estimation and evaluation experiments with data.  They
-allow you to generate and fit [Scikit-learn](https://scikit-learn.org/stable/) estimators to data stored in Pandas 
-dataframes.  
+allow you to generate and fit [Scikit-learn](https://scikit-learn.org/stable/) 
+estimators to data stored in Pandas dataframes.  
 
 Because data in a Pandas dataframe is labelled, the models can be configured to use
 specific data while ignoring data that is not relevant.  This means you can easily 
@@ -17,8 +17,8 @@ Instead, you can pass all the data to each model and it will only use the fields
 it was intended for.
 
 The models also allow you to specify additional calculated input features which are
-automatically calculated prior to model-fitting using the Pandas [`eval`](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.eval.html#pandas-dataframe-eval) method.  This 
-allows you to define non-linear features as expressions (see the nonlinear model 
+automatically calculated prior to model-fitting using the Pandas [`DataFrame.eval`](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.eval.html#pandas-dataframe-eval) method.  
+This allows you to define non-linear features as expressions (see the nonlinear model 
 fitting example below).
 
 
@@ -280,7 +280,7 @@ the code in this repository:
   A demonstration of SINDy identifying the Lorenz system 
 2. [Sparse-Identification-with-SINDy-on-Lorenz-system-with-control.ipynb](Sparse-Identification-with-SINDy-on-Lorenz-system-with-control.ipynb)
   A demonstration of SINDYc identifying the forced Lorenz system
-3. [sindy.py](sindy.py) Python module used in above examples.
+3. See [sindy.py](dynopt/models/sindy.py) for least-squares implementation used in this repository.
 
 There is also an [official PySindy package][4] developed by Brian de Silva et al. at the University of Washington for implementing SINDy which contains some additional features.
 
