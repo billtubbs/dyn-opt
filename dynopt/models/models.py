@@ -21,7 +21,8 @@ from sklearn.preprocessing import StandardScaler, FunctionTransformer
 from sklearn.metrics import r2_score
 from dynopt.preprocessing.utils import feature_dataframe_from_expressions, \
                                        feature_array_from_expressions
-from dynopt.models.sindy import polynomial_features, sparsify_dynamics_lstsq, \
+from dynopt.models.sindy import sparsify_dynamics_lstsq
+from dynopt.preprocessing.utils import polynomial_features, \
                                 polynomial_feature_labels
 
 
