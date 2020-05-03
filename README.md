@@ -6,7 +6,7 @@ and [dynamic optimization][3].
 
 The file [models.py](models.py) contains a class of models that provide a convenient
 interface for running model estimation and evaluation experiments with data.  They
-allow you to generate and fit Scikit-learn estimators to data stored in Pandas 
+allow you to generate and fit [Scikit-learn](https://scikit-learn.org/stable/) estimators to data stored in Pandas 
 dataframes.  
 
 Because data in a Pandas dataframe is labelled, the models can be configured to use
@@ -215,7 +215,7 @@ original system equations above.
 
 ## Example 3 - Sparse Identification of Non-linear Dynamics
 
-The Sparse Identification of Non-linear Dynamics algorithm (SINDy) is a numerical 
+The [Sparse Identification of Non-linear Dynamics algorithm (SINDy)][1] is a numerical 
 technique that automatically identifies non-linear relationships when the governing 
 equations of the system are sparse (i.e. when they have a few dominant terms).  When 
 this is the case, the SINDy algorithm finds a sparse approximation of the true 
