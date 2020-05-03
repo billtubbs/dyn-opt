@@ -43,7 +43,7 @@ The following table summarizes the three main classes of models.
 The following examples illustrate how these three model types can be used.
 
 
-## Example 1 - Linear regression on a subset of features
+## Example 1 - Linear Regression with a Subset of Features
 
 For this example we download the Boston housing price dataset:
 
@@ -82,7 +82,7 @@ print(X.head)
 ```
 
 The input (x) and output (y) data that you want to use can now be identified by 
-their column names when initializing the model:
+the column names when initializing the model:
 
 ```python
 # Select desired inputs and outputs
@@ -125,7 +125,7 @@ print(model.predict(X.head()))
 # 4  32.273937
 ```
 
-Single-point prediction using dictionaries is also supported:
+Faster, single-point prediction using dictionaries is also supported:
 
 ```python
 x = {'LSTAT': 4.98, 'RM': 6.575, 'TAX': 296}
