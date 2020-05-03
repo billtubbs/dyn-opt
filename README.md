@@ -334,5 +334,5 @@ fitting dynamic models.
  - `feature_dataframe_from_expressions(data, expressions)`
  - `feature_array_from_expressions(data, expressions)`
  
-Please refer to the docstrings in [dynopt.preprocessing.utils.py](dynopt.preprocessing.utils.py)
+Please refer to the docstrings in [dynopt/preprocessing/utils.py](dynopt/preprocessing/utils.py)
 for details on these functions.
