@@ -7,10 +7,11 @@ and [dynamic optimization][3].
 1. Models
 
     - [dynopt.models.models](dynopt.models.models) - A class of models for running model estimation and evaluation experiments with data
+    - [dynopt.models.sindy](dynopt.models.sindy) - Sparse non-linear identification algorithm (SINDy)
 
 2. Preprocessing utilities
 
-    - [dynopt.preprocessing.utils](dynopt.preprocessing.utils) - Functions for preprocessing time-series data in preparation for model-fitting.
+    - [dynopt.preprocessing.utils](dynopt.preprocessing.utils) - Functions for processing time-series data in preparation for model-fitting.
 
 
 ## 1. Model Fitting
@@ -35,9 +36,9 @@ The following table summarizes the three main classes of models.
 
 | Model       | Data input/output type | Selectable inputs/outputs | Calculated inputs | Sparse model identification |
 | ----------- | :--------------------: | :-----------------------: | :---------------: | :-------------------------: | 
-| [Model](dynopt.models.models.Model)  | DataFrame  | Yes  | No  | No  |
-| [NonLinearModel](dynopt.models.models.NonLinearModel) | DataFrame  | Yes  | Yes  | No   |
-| [SparseNonLinearModel](dynopt.models.models.SparseNonLinearModel)  | DataFrame  | Yes  | Yes  | Yes  |
+| `Model` | DataFrame  | Yes  | No  | No  |
+| `NonLinearModel` | DataFrame  | Yes  | Yes  | No   |
+| `SparseNonLinearModel`  | DataFrame  | Yes  | Yes  | Yes  |
 
 The following examples illustrate how these three model types can be used.
 
