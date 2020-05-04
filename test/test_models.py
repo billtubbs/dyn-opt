@@ -568,12 +568,16 @@ class ModelTests(unittest.TestCase):
         dxdt = np.array([[f1(*x), f2(*x)] for x in inputs]).astype(float)
 
         # Initialize model
-        xin_names = ['x_1', 'x_2']  # You can use any name
+        xin_names = ['x_1', 'x_2']
         dxdt_names = ['dx_1/dt', 'dx_2/dt']
         input_features = ['x0', 'x1', 'x0**2']
         model = NonLinearDynamicSystem(xin_names, dxdt_names, 
                                        input_features=input_features)
         self.assertTrue(str(model).startswith("NonLinearDynamicSystem"))
+        self.assertEqual(model.xin_names, ['x_1', 'x_2'])
+        self.assertEqual(model.uin_names, [])
+        self.assertEqual(model.x_names, ['x_1', 'x_2'])
+        self.assertEqual(model.input_features, ['x0', 'x1', 'x0**2'])
 
         # Fit model to data
         inputs = pd.DataFrame(inputs, columns=xin_names)
@@ -619,6 +623,8 @@ class ModelTests(unittest.TestCase):
         self.assertEqual(model._uin_rename_map, {'u_1': 'u0', 'u_2': 'u1'})
         model.dxdt_names = ['dx_1/dt', 'dx_2/dt', 'dx_3/dt']
         self.assertEqual(model._dxdt_labels, ['dxdt0', 'dxdt1', 'dxdt2'])
+        self.assertEqual(model.x_names, ['u_1', 'u_2', 'x_1', 'x_2', 'x_3'])
+        self.assertEqual(model.input_features, ['x0', 'x1', 'x2', 'u0', 'u1'])
         # TODO: Test resetting of model fit (coef_ and intercept_).
 
     def test_LinearPredictionModel(self):
