@@ -541,6 +541,17 @@ class ModelTests(unittest.TestCase):
             dxdt_pred = model.predict(x)
             assert_array_almost_equal(np.array(list(dxdt_pred.values())), 
                                                dxdt.loc[i].values)
+        
+        # Test changing attributes
+        model.xin_names = ['velocity', 'position']
+        self.assertEqual(model._xin_labels, ['x0', 'x1'])
+        self.assertEqual(model._xin_rename_map, {'velocity': 'x0', 'position': 'x1'})
+        model.uin_names = ['motor force', 'resistance']
+        self.assertEqual(model._uin_labels, ['u0', 'u1'])
+        self.assertEqual(model._uin_rename_map, {'motor force': 'u0', 'resistance': 'u1'})
+        model.dxdt_names = ['acceleration', 'velocity']
+        self.assertEqual(model._dxdt_labels, ['dxdt0', 'dxdt1'])
+        # TODO: Test resetting of model fit (coef_ and intercept_).
 
     def test_NonlinearDynamicSystem(self):
 
