@@ -305,7 +305,7 @@ class NonLinearModel(Model):
                          scale_outputs=scale_outputs, *args, **kwargs)
         if input_features is None:
             input_features = self._input_labels
-        self.input_features = input_features
+        self._input_features = input_features
         self.input_transformer = self.input_transformer_(self.input_features)
         self.arg_names = ['x_names', 'y_names']
         self.kwarg_names = ['estimator', 'input_features']
@@ -333,6 +333,10 @@ class NonLinearModel(Model):
                                    expressions=input_features)
         input_transformer = FunctionTransformer(feature_function, validate=False)
         return input_transformer
+
+    @property
+    def input_features(self):
+        return self._input_features
 
     @property
     def coef_(self):
@@ -616,7 +620,7 @@ class SparseNonLinearModel(NonLinearModel):
         # Set linear estimator coefficients to values found from
         # sparse identification
         coefficients = non_zero_coefs.T.values
-        self.input_features = non_zero_coefs.index.tolist()
+        self._input_features = non_zero_coefs.index.tolist()
         self.estimator.intercept_ = intercepts
         self.estimator.coef_ = coefficients
 
@@ -870,7 +874,7 @@ class DynamicSystem(Model):
         self._xin_names = value
         self._xin_labels = [f'x{i}' for i in range(len(value))]
         self._xin_rename_map = dict(zip(value, self._xin_labels))
-        self.input_features = self._xin_labels + self._uin_labels
+        self._input_features = self._xin_labels + self._uin_labels
 
     @property
     def uin_names(self):
@@ -881,7 +885,7 @@ class DynamicSystem(Model):
         self._uin_names = value
         self._uin_labels = [f'u{i}' for i in range(len(value))]
         self._uin_rename_map = dict(zip(value, self._uin_labels))
-        self.input_features = self._xin_labels + self._uin_labels
+        self._input_features = self._xin_labels + self._uin_labels
 
     @property
     def dxdt_names(self):
@@ -1068,7 +1072,7 @@ class NonLinearDynamicSystem(NonLinearModel):
         self._xin_names = value
         self._xin_labels = [f'x{i}' for i in range(len(value))]
         self._xin_rename_map = dict(zip(value, self._xin_labels))
-        self.input_features = self._xin_labels + self._uin_labels
+        self._input_features = self._xin_labels + self._uin_labels
 
     @property
     def uin_names(self):
@@ -1079,7 +1083,7 @@ class NonLinearDynamicSystem(NonLinearModel):
         self._uin_names = value
         self._uin_labels = [f'u{i}' for i in range(len(value))]
         self._uin_rename_map = dict(zip(value, self._uin_labels))
-        self.input_features = self._xin_labels + self._uin_labels
+        self._input_features = self._xin_labels + self._uin_labels
 
     @property
     def dxdt_names(self):
