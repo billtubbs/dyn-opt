@@ -603,15 +603,23 @@ class ModelTests(unittest.TestCase):
         x2 = inputs.loc[2].to_dict()
         y2 = {'dx_1/dt': 2.0, 'dx_2/dt': 5.0}  # Y.loc[2].to_dict()
         assert_series_equal(pd.Series(model.predict(x2)), pd.Series(y2))
-
         x2 = inputs.loc[2]  # pd.Series
         assert_series_equal(pd.Series(model.predict(x2)), pd.Series(y2))
-
         x2 = inputs.loc[2].values  # np.ndarray
         assert_series_equal(pd.Series(model.predict(x2)), pd.Series(y2))
-
         x2 = inputs.loc[2].tolist()  # list
         assert_series_equal(pd.Series(model.predict(x2)), pd.Series(y2))
+
+        # Test changing attributes
+        model.xin_names = xin_names = ['x_1', 'x_2', 'x_3']
+        self.assertEqual(model._xin_labels, ['x0', 'x1', 'x2'])
+        self.assertEqual(model._xin_rename_map, {'x_1': 'x0', 'x_2': 'x1', 'x_3': 'x2'})
+        model.uin_names = ['u_1', 'u_2']
+        self.assertEqual(model._uin_labels, ['u0', 'u1'])
+        self.assertEqual(model._uin_rename_map, {'u_1': 'u0', 'u_2': 'u1'})
+        model.dxdt_names = ['dx_1/dt', 'dx_2/dt', 'dx_3/dt']
+        self.assertEqual(model._dxdt_labels, ['dxdt0', 'dxdt1', 'dxdt2'])
+        # TODO: Test resetting of model fit (coef_ and intercept_).
 
     def test_LinearPredictionModel(self):
 
