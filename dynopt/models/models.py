@@ -60,12 +60,12 @@ class Model:
 
     def __init__(self, x_names, y_names, estimator=None, scale_inputs=None, 
                  scale_outputs=None, *args, **kwargs):
-        self._x_names = None
-        self._x_labels = None
-        self._x_rename_map = None
-        self._y_names = None
-        self._y_labels = None
-        self._y_rename_map = None
+        self._input_names = None
+        self._input_labels = None
+        self._input_rename_map = None
+        self._output_names = None
+        self._output_labels = None
+        self._output_rename_map = None
         self.x_names = list(x_names)
         self.y_names = list(y_names)
         if scale_inputs:
@@ -101,25 +101,25 @@ class Model:
 
     @property
     def x_names(self):
-        return self._x_names
+        return self._input_names
 
     @x_names.setter
     def x_names(self, value):
-        self._x_names = value
-        self._x_labels = [f'x{i}' for i in range(len(value))]
-        self._x_rename_map = dict(zip(value, self._x_labels))
+        self._input_names = value
+        self._input_labels = [f'x{i}' for i in range(len(value))]
+        self._input_rename_map = dict(zip(value, self._input_labels))
 
     @property
     def y_names(self):
         """The names of the output variables in y.
         """
-        return self._y_names
+        return self._output_names
 
     @y_names.setter
     def y_names(self, value):
-        self._y_names = value
-        self._y_labels = [f'y{i}' for i in range(len(value))]
-        self._y_rename_map = dict(zip(value, self._y_labels))
+        self._output_names = value
+        self._output_labels = [f'y{i}' for i in range(len(value))]
+        self._output_rename_map = dict(zip(value, self._output_labels))
 
     def fit(self, X, y):
         """Fit linear model to features.
@@ -189,7 +189,7 @@ class Model:
         elif isinstance(X, pd.DataFrame):
             # Re-label inputs as 'x0', 'x1', etc.
             index = X.index
-            X = X[self.x_names].rename(columns=self._x_rename_map)
+            X = X[self.x_names].rename(columns=self._input_rename_map)
             if self.input_scaler:
                 # Apply the scaling to input data
                 X = self.input_scaler.transform(X.values.astype(np.float))
@@ -304,7 +304,7 @@ class NonLinearModel(Model):
         super().__init__(x_names, y_names, scale_inputs=scale_inputs, 
                          scale_outputs=scale_outputs, *args, **kwargs)
         if input_features is None:
-            input_features = self._x_labels
+            input_features = self._input_labels
         self.input_features = input_features
         self.input_transformer = self.input_transformer_(self.input_features)
         self.arg_names = ['x_names', 'y_names']
@@ -340,7 +340,7 @@ class NonLinearModel(Model):
         as a Pandas Dataframe.  To access the attribute directly use
         model.estimator.coef_ instead.
         """
-        return pd.DataFrame(self.estimator.coef_, index=self._y_labels,
+        return pd.DataFrame(self.estimator.coef_, index=self._output_labels,
                             columns=self.input_features)
 
     @coef_.setter
@@ -353,7 +353,7 @@ class NonLinearModel(Model):
         as a Pandas Series.  To access the attribute directly use
         model.estimator.intercept_ instead.
         """
-        return pd.Series(self.estimator.intercept_, index=self._y_labels)
+        return pd.Series(self.estimator.intercept_, index=self._output_labels)
 
     @intercept_.setter
     def intercept_(self, values):
@@ -387,7 +387,7 @@ class NonLinearModel(Model):
         assert isinstance(y, pd.DataFrame)
 
         # Re-label inputs as 'x0', 'x1', etc.
-        X = X[self.x_names].rename(columns=self._x_rename_map)
+        X = X[self.x_names].rename(columns=self._input_rename_map)
         y = y[self.y_names]
 
         # Note: Can't use scikit learn Pipeline because it doesn't
@@ -434,7 +434,7 @@ class NonLinearModel(Model):
             # point as a dataframe.
             # TODO: This is a big speed improvement but complex...
             # Re-label inputs as 'x0', 'x1', etc.
-            x_values = {self._x_rename_map[k]: v for k, v in X.items()}
+            x_values = {self._input_rename_map[k]: v for k, v in X.items()}
             #TODO: Should be checking keys!
             ref_dict = {**x_values, **self.functions}
             # Calculate evaluated features
@@ -451,7 +451,7 @@ class NonLinearModel(Model):
         elif isinstance(X, pd.DataFrame):
             # Re-label inputs as 'x0', 'x1', etc.
             index = X.index
-            X = X[self.x_names].rename(columns=self._x_rename_map)
+            X = X[self.x_names].rename(columns=self._input_rename_map)
             if self.input_transformer:
                 X = self.input_transformer.transform(X)
             if self.input_scaler:
@@ -575,7 +575,7 @@ class SparseNonLinearModel(NonLinearModel):
         assert isinstance(y, pd.DataFrame)
 
         # Re-label inputs as 'x0', 'x1', etc.
-        X = X[self.x_names].rename(columns=self._x_rename_map)
+        X = X[self.x_names].rename(columns=self._input_rename_map)
         y = y[self.y_names]
 
         # Calculate library of polynomial features
@@ -830,11 +830,11 @@ class DynamicSystem(Model):
 
     def __init__(self, xin_names, dxdt_names, uin_names=None, estimator=None,
                  scale_inputs=None, scale_outputs=None, *args, **kwargs):
-        self._xin_names = []
-        self._xin_labels = None
+        self._xin_names = None
+        self._xin_labels = []
         self._xin_rename_map = None
-        self._uin_names = []
-        self._uin_labels = None
+        self._uin_names = None
+        self._uin_labels = []
         self._uin_rename_map = None
         self._dxdt_names = None
         self._dxdt_labels = None
@@ -870,7 +870,7 @@ class DynamicSystem(Model):
         self._xin_names = value
         self._xin_labels = [f'x{i}' for i in range(len(value))]
         self._xin_rename_map = dict(zip(value, self._xin_labels))
-        self.x_names = self._xin_names + self.uin_names
+        self.input_features = self._xin_labels + self._uin_labels
 
     @property
     def uin_names(self):
@@ -881,16 +881,15 @@ class DynamicSystem(Model):
         self._uin_names = value
         self._uin_labels = [f'u{i}' for i in range(len(value))]
         self._uin_rename_map = dict(zip(value, self._uin_labels))
-        self.x_names = self.xin_names + self._uin_names
+        self.input_features = self._xin_labels + self._uin_labels
 
     @property
     def dxdt_names(self):
         """The names of the output variables (dx/dt)."""
-        return self._dxdt_names
+        return self.y_names
 
     @dxdt_names.setter
     def dxdt_names(self, value):
-        self._dxdt_names = value
         self._dxdt_labels = [f'dxdt{i}' for i in range(len(value))]
         self._dxdt_rename_map = dict(zip(value, self._dxdt_labels))
         self.y_names = value
@@ -1028,11 +1027,11 @@ class NonLinearDynamicSystem(NonLinearModel):
                  input_features=None, scale_inputs=False, scale_outputs=False, 
                  *args, **kwargs):
 
-        self._xin_names = []
-        self._xin_labels = None
+        self._xin_names = None
+        self._xin_labels = []
         self._xin_rename_map = None
-        self._uin_names = []
-        self._uin_labels = None
+        self._uin_names = None
+        self._uin_labels = []
         self._uin_rename_map = None
         self._dxdt_names = None
         self._dxdt_labels = None
@@ -1069,7 +1068,7 @@ class NonLinearDynamicSystem(NonLinearModel):
         self._xin_names = value
         self._xin_labels = [f'x{i}' for i in range(len(value))]
         self._xin_rename_map = dict(zip(value, self._xin_labels))
-        self.x_names = self._xin_names + self.uin_names
+        self.input_features = self._xin_labels + self._uin_labels
 
     @property
     def uin_names(self):
@@ -1080,7 +1079,7 @@ class NonLinearDynamicSystem(NonLinearModel):
         self._uin_names = value
         self._uin_labels = [f'u{i}' for i in range(len(value))]
         self._uin_rename_map = dict(zip(value, self._uin_labels))
-        self.x_names = self.xin_names + self._uin_names
+        self.input_features = self._xin_labels + self._uin_labels
 
     @property
     def dxdt_names(self):

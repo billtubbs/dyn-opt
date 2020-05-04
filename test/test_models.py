@@ -14,6 +14,10 @@ from dynopt.models.models import Model, NonLinearModel, SparseNonLinearModel, \
                                  DynamicSystem, NonLinearDynamicSystem
 
 
+# TODO:
+# - Test changing x_names, y_names, xin_names, etc
+# - Need a 'check_model_fitted' flag
+
 class ModelTests(unittest.TestCase):
 
     def test_Model_linear(self):
@@ -42,10 +46,10 @@ class ModelTests(unittest.TestCase):
         model = Model(x_names, y_names)
         self.assertTrue(str(model).startswith("Model"))
         self.assertIsInstance(model.estimator, LinearRegression)
-        self.assertEqual(model._x_labels, ['x0', 'x1'])
-        self.assertEqual(model._x_rename_map, {'x_0': 'x0', 'x_1': 'x1'})
-        self.assertEqual(model._y_labels, ['y0'])
-        self.assertEqual(model._y_rename_map, {'y': 'y0'})
+        self.assertEqual(model._input_labels, ['x0', 'x1'])
+        self.assertEqual(model._input_rename_map, {'x_0': 'x0', 'x_1': 'x1'})
+        self.assertEqual(model._output_labels, ['y0'])
+        self.assertEqual(model._output_rename_map, {'y': 'y0'})
         params = model.get_params()
         self.assertEqual(params, {"x_names": x_names, "y_names": y_names,
                                   "estimator": model.estimator})
@@ -100,15 +104,15 @@ class ModelTests(unittest.TestCase):
         self.assertTrue(str(model).startswith("NonLinearModel"))
         self.assertIsInstance(model.estimator, LinearRegression)
         self.assertTrue(model.input_transformer is not None)
-        self.assertEqual(model._x_labels, ['x0', 'x1'])
-        self.assertEqual(model._x_rename_map, {'x_0': 'x0', 'x_1': 'x1'})
-        self.assertEqual(model.x_features, ['x0', 'x1'])  # No non-linear features
-        self.assertEqual(model._y_labels, ['y0'])
-        self.assertEqual(model._y_rename_map, {'y': 'y0'})
+        self.assertEqual(model._input_labels, ['x0', 'x1'])
+        self.assertEqual(model._input_rename_map, {'x_0': 'x0', 'x_1': 'x1'})
+        self.assertEqual(model.input_features, ['x0', 'x1'])  # No non-linear features
+        self.assertEqual(model._output_labels, ['y0'])
+        self.assertEqual(model._output_rename_map, {'y': 'y0'})
         params = model.get_params()
         self.assertEqual(params, {"x_names": x_names, "y_names": y_names,
                                   "estimator": model.estimator,
-                                  "x_features": ['x0', 'x1']})
+                                  "input_features": ['x0', 'x1']})
         self.assertIsInstance(model.estimator, LinearRegression)
 
         # Fit model to data
@@ -157,8 +161,8 @@ class ModelTests(unittest.TestCase):
         # Initialize model
         x_names = ['x_1', 'x_2']  # You can use any name
         y_names = ['dx_1/dt', 'dx_2/dt']
-        x_features = ['x0', 'x1', 'x0**2']
-        model = NonLinearModel(x_names, y_names, x_features=x_features)
+        input_features = ['x0', 'x1', 'x0**2']
+        model = NonLinearModel(x_names, y_names, input_features=input_features)
         self.assertTrue(str(model).startswith("NonLinearModel"))
 
         # Fit model to data
@@ -223,11 +227,11 @@ class ModelTests(unittest.TestCase):
         model_scaled2 = NonLinearModel(x_names, y_names, scale_inputs=True,
                                        scale_outputs=True)
         self.assertIsInstance(model.estimator, LinearRegression)
-        self.assertEqual(model._x_labels, ['x0', 'x1'])
-        self.assertEqual(model._x_rename_map, {'x_0': 'x0', 'x_1': 'x1'})
-        self.assertEqual(model.x_features, ['x0', 'x1'])  # No non-linear features
-        self.assertEqual(model._y_labels, ['y0'])
-        self.assertEqual(model._y_rename_map, {'y': 'y0'})
+        self.assertEqual(model._input_labels, ['x0', 'x1'])
+        self.assertEqual(model._input_rename_map, {'x_0': 'x0', 'x_1': 'x1'})
+        self.assertEqual(model.input_features, ['x0', 'x1'])  # No non-linear features
+        self.assertEqual(model._output_labels, ['y0'])
+        self.assertEqual(model._output_rename_map, {'y': 'y0'})
         self.assertTrue(model.input_transformer is not None)
         self.assertTrue(model.input_scaler is None)
         self.assertTrue(model_scaled1.input_scaler is not None)
@@ -317,12 +321,12 @@ class ModelTests(unittest.TestCase):
         threshold = 0.5
         model.fit(X, Y, threshold=threshold)
 
-        test_x_features = ['x0', 'x1', 'x0**2']
-        self.assertEqual(model.x_features, test_x_features)
+        test_input_features = ['x0', 'x1', 'x0**2']
+        self.assertEqual(model.input_features, test_input_features)
         params = model.get_params()
         test_params = {
             "x_names": x_names, "y_names": y_names,
-            "estimator": model.estimator, "x_features": test_x_features,
+            "estimator": model.estimator, "input_features": test_input_features,
             "custom_features": None, "poly_order": poly_order, "threshold": threshold,
         }
         self.assertEqual(params, test_params)
@@ -371,7 +375,7 @@ class ModelTests(unittest.TestCase):
         params = model.get_params()
         self.assertEqual(params, {'x_names': x_names, 'y_names': y_names,
                                   'estimator': model.estimator,
-                                  'x_features': test_x_features,
+                                  'input_features': test_input_features,
                                   'custom_features': None,
                                   'poly_order': new_params['poly_order'], 
                                   'threshold': new_params['threshold']})
@@ -427,8 +431,8 @@ class ModelTests(unittest.TestCase):
         model.fit(X_u, dXdt, threshold=0.2)
         self.assertEqual(model.n_params, 4)
 
-        test_x_features = ['x1', 'x2', 'sin(x0)']
-        self.assertEqual(model.x_features, test_x_features)
+        test_input_features = ['x1', 'x2', 'sin(x0)']
+        self.assertEqual(model.input_features, test_input_features)
         self.assertEqual(model.custom_features, custom_features)
 
         coef_test = pd.DataFrame(
