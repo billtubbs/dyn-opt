@@ -119,7 +119,7 @@ def tune_PI(Gp, Mr=None):
         if Mr is None:
             Mr = 0.25
         Ti = integration_constant_StableProcess(Gp.theta, Gp.T1, Gp.T2)
-        omega_0 = crossover_frequency_StableProcess(Gp.theta, Ti, Gp.T0, Gp.T1, Gp.T2, Mr)
+        omega_0 = crossover_frequency_StableProcess(Gp.theta, Ti, Gp.T0, Gp.T1, Gp.T2, Mr=Mr)
         Kc = PI_gain_StableProcess(Gp.K, Gp.theta, omega_0, Ti, Gp.T0, Gp.T1, Gp.T2)
 
         return Kc, Ti
@@ -138,7 +138,7 @@ def tune_PI(Gp, Mr=None):
 
 def tune(Gc, Gp, Mr=None):
     if isinstance(Gc, PIController):
-        Gc.Kc2, Gc.Ti2 = tune_PI(Gp, Mr=Mr)
+        Gc.Kc, Gc.Ti = tune_PI(Gp, Mr=Mr)
     else:
         raise NotImplementedError()
     return True
@@ -186,6 +186,19 @@ def run_tests():
     Kc2, Ti2 = tune_PI(Gp2)
     assert Ti2 == Ti
     assert Kc2 == Kc
+
+    # Exercise 14.7 from GEL-2005 course exercises:
+    Gp = ProcessWithIntegrator(K=1, theta=0, T=1)
+    Mr = 4.4
+    Amax = maximum_amplitude(Mr)
+    Phimax = maximum_phase(Amax)
+    Ti = integration_constant_ProcessWithIntegrator(Gp.theta, Gp.T, Amax, Phimax, Mr)
+    omega_max = omega_max_ProcessWithIntegrator(Gp.theta, Gp.T, Ti)
+    assert (Amax - 1.253) < 0.001
+    assert (Phimax + 2.495) < 0.001
+    assert (omega_max - 0.462) < 0.001
+
+    print('Tests completed.')
 
 
 if __name__ == '__main__':
