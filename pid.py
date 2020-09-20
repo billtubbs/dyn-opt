@@ -71,3 +71,4 @@ class PIDController:
     def __repr__(self):
         return f"PIDController(Kc={self.Kc.__repr__()}, Ti={self.Ti.__repr__()}, " \
                f"Td={self.Td.__repr__()}, Tf={self.Tf.__repr__()})"
+
