@@ -60,6 +60,7 @@ class Model:
 
     def __init__(self, x_names, y_names, estimator=None, scale_inputs=None, 
                  scale_outputs=None, *args, **kwargs):
+        print(f"Model __init__ was called")
         self._input_names = None
         self._input_labels = None
         self._input_rename_map = None
@@ -301,12 +302,15 @@ class NonLinearModel(Model):
 
     def __init__(self, x_names, y_names, estimator=None, input_features=None, 
                  scale_inputs=False, scale_outputs=False, *args, **kwargs):
+        print(f"NonLinearModel __init__ was called and sees: {input_features}")
         super().__init__(x_names, y_names, scale_inputs=scale_inputs, 
                          scale_outputs=scale_outputs, *args, **kwargs)
+        print(f"NonLinearModel sees: {input_features}")
         if input_features is None:
             input_features = self._input_labels
         self._input_features = input_features
-        self.input_transformer = self.input_transformer_(self.input_features)
+        print(f"NonLinearModel saves: {input_features}")
+        self.input_transformer = self.input_transformer_(input_features)
         self.arg_names = ['x_names', 'y_names']
         self.kwarg_names = ['estimator', 'input_features']
         self.class_name = 'NonLinearModel'
@@ -838,6 +842,7 @@ class DynamicSystem(Model):
 
     def __init__(self, xin_names, dxdt_names, uin_names=None, estimator=None,
                  scale_inputs=None, scale_outputs=None, *args, **kwargs):
+        print(f"DynamicSystem __init__ was called")
         self._xin_names = []
         self._xin_labels = []
         self._xin_rename_map = {}
@@ -879,7 +884,6 @@ class DynamicSystem(Model):
         self._xin_labels = [f'x{i}' for i in range(len(value))]
         self._xin_rename_map = dict(zip(value, self._xin_labels))
         self.x_names = self._uin_names + self._xin_names
-        self._input_features = self._xin_labels + self._uin_labels
 
     @property
     def uin_names(self):
@@ -891,7 +895,6 @@ class DynamicSystem(Model):
         self._uin_labels = [f'u{i}' for i in range(len(value))]
         self._uin_rename_map = dict(zip(value, self._uin_labels))
         self.x_names = self._uin_names + self._xin_names
-        self._input_features = self._xin_labels + self._uin_labels
 
     @property
     def dxdt_names(self):
@@ -949,7 +952,7 @@ class DynamicSystem(Model):
         return f"{self.class_name}({', '.join(all_args)})"
 
 
-class NonLinearDynamicSystem(NonLinearModel):
+class NonLinearDynamicSystem(DynamicSystem, NonLinearModel):
     """Model interface for running dynamical system identification
     and model evaluation experiments with models that include 
     non-linear functions of the input variables.  These can be used
@@ -1055,6 +1058,7 @@ class NonLinearDynamicSystem(NonLinearModel):
         y_names = self.dxdt_names
         if input_features is None:
             input_features = self._xin_labels + self._uin_labels
+        print(f"NonLinearDynamicSystem sees: {input_features}")
         super().__init__(x_names, y_names, estimator=estimator, 
                          input_features=input_features, scale_inputs=scale_inputs, 
                          scale_outputs=scale_outputs, *args, **kwargs)
@@ -1068,86 +1072,86 @@ class NonLinearDynamicSystem(NonLinearModel):
                 "dxdt_names": self.dxdt_names, "estimator": self.estimator, 
                 "input_features": self.input_features}
 
-    @property
-    def xin_names(self):
-        return self._xin_names
+    # @property
+    # def xin_names(self):
+    #     return self._xin_names
 
-    @xin_names.setter
-    def xin_names(self, value):
-        self._xin_names = value
-        self._xin_labels = [f'x{i}' for i in range(len(value))]
-        self._xin_rename_map = dict(zip(value, self._xin_labels))
-        self.x_names = self._uin_names + self._xin_names
-        self._input_features = self._xin_labels + self._uin_labels
+    # @xin_names.setter
+    # def xin_names(self, value):
+    #     self._xin_names = value
+    #     self._xin_labels = [f'x{i}' for i in range(len(value))]
+    #     self._xin_rename_map = dict(zip(value, self._xin_labels))
+    #     self.x_names = self._uin_names + self._xin_names
+    #     self._input_features = self._xin_labels + self._uin_labels
 
-    @property
-    def uin_names(self):
-        return self._uin_names
+    # @property
+    # def uin_names(self):
+    #     return self._uin_names
 
-    @uin_names.setter
-    def uin_names(self, value):
-        self._uin_names = value
-        self._uin_labels = [f'u{i}' for i in range(len(value))]
-        self._uin_rename_map = dict(zip(value, self._uin_labels))
-        self.x_names = self._uin_names + self._xin_names
-        self._input_features = self._xin_labels + self._uin_labels
+    # @uin_names.setter
+    # def uin_names(self, value):
+    #     self._uin_names = value
+    #     self._uin_labels = [f'u{i}' for i in range(len(value))]
+    #     self._uin_rename_map = dict(zip(value, self._uin_labels))
+    #     self.x_names = self._uin_names + self._xin_names
+    #     self._input_features = self._xin_labels + self._uin_labels
 
-    @property
-    def dxdt_names(self):
-        """The names of the output variables (dx/dt)."""
-        return self._dxdt_names
+    # @property
+    # def dxdt_names(self):
+    #     """The names of the output variables (dx/dt)."""
+    #     return self._dxdt_names
 
-    @dxdt_names.setter
-    def dxdt_names(self, value):
-        self._dxdt_names = value
-        self._dxdt_labels = [f'dxdt{i}' for i in range(len(value))]
-        self._dxdt_rename_map = dict(zip(value, self._dxdt_labels))
-        self.y_names = value
+    # @dxdt_names.setter
+    # def dxdt_names(self, value):
+    #     self._dxdt_names = value
+    #     self._dxdt_labels = [f'dxdt{i}' for i in range(len(value))]
+    #     self._dxdt_rename_map = dict(zip(value, self._dxdt_labels))
+    #     self.y_names = value
 
-    @property
-    def coef_(self):
-        """The coefficients from the linear model (model.coef_)
-        as a Pandas Dataframe.  To access the attribute directly use
-        model.estimator.coef_ instead.
-        """
-        return pd.DataFrame(self.estimator.coef_, index=self._dxdt_labels,
-                            columns=self.input_features)
+    # @property
+    # def coef_(self):
+    #     """The coefficients from the linear model (model.coef_)
+    #     as a Pandas Dataframe.  To access the attribute directly use
+    #     model.estimator.coef_ instead.
+    #     """
+    #     return pd.DataFrame(self.estimator.coef_, index=self._dxdt_labels,
+    #                         columns=self.input_features)
 
-    @coef_.setter
-    def coef_(self, values):
-        self.estimator.coef_[:] = values
+    # @coef_.setter
+    # def coef_(self, values):
+    #     self.estimator.coef_[:] = values
 
-    @property
-    def intercept_(self):
-        """The intercepts from the linear model (model.intercept_)
-        as a Pandas Series.  To access the attribute directly use
-        model.estimator.intercept_ instead.
-        """
-        return pd.Series(self.estimator.intercept_, index=self._dxdt_labels)
+    # @property
+    # def intercept_(self):
+    #     """The intercepts from the linear model (model.intercept_)
+    #     as a Pandas Series.  To access the attribute directly use
+    #     model.estimator.intercept_ instead.
+    #     """
+    #     return pd.Series(self.estimator.intercept_, index=self._dxdt_labels)
 
-    @intercept_.setter
-    def intercept_(self, values):
-        self.estimator.intercept_[:] = values
+    # @intercept_.setter
+    # def intercept_(self, values):
+    #     self.estimator.intercept_[:] = values
 
-    @property
-    def n_params(self):
-        """Get total number of parameters in the model.
-        """
-        n_params = 0
-        attr_names = ['coef_', 'intercept_', 'coefs_', 'intercepts_']
-        param_arrays = []
-        for attr_name in attr_names:
-            try:
-                attr = getattr(self.estimator, attr_name)
-            except AttributeError:
-                continue
-            if isinstance(attr, list):
-                param_arrays += attr
-            else:
-                param_arrays.append(attr)
-        n_params = sum([(a != 0).sum() for a in param_arrays])
+    # @property
+    # def n_params(self):
+    #     """Get total number of parameters in the model.
+    #     """
+    #     n_params = 0
+    #     attr_names = ['coef_', 'intercept_', 'coefs_', 'intercepts_']
+    #     param_arrays = []
+    #     for attr_name in attr_names:
+    #         try:
+    #             attr = getattr(self.estimator, attr_name)
+    #         except AttributeError:
+    #             continue
+    #         if isinstance(attr, list):
+    #             param_arrays += attr
+    #         else:
+    #             param_arrays.append(attr)
+    #     n_params = sum([(a != 0).sum() for a in param_arrays])
 
-        return n_params
+    #     return n_params
 
     def predict(self, inputs):
         """Predict using the model.  If inputs is a DataFrame with 

@@ -555,6 +555,7 @@ class ModelTests(unittest.TestCase):
 
     def test_NonlinearDynamicSystem(self):
 
+        print("\nSTART NonlinearDynamicSystem TEST")
         # Simulate a non-linear system of ODEs:
         # dx1_dt = x2 - 2*x1 + x2**2
         # dx2_dt = 1 + x1**2
@@ -577,6 +578,7 @@ class ModelTests(unittest.TestCase):
         self.assertEqual(model.xin_names, ['x_1', 'x_2'])
         self.assertEqual(model.uin_names, [])
         self.assertEqual(model.x_names, ['x_1', 'x_2'])
+        breakpoint()
         self.assertEqual(model.input_features, ['x0', 'x1', 'x0**2'])
 
         # Fit model to data
