@@ -180,15 +180,18 @@ def div_poly(C, D):
         To complete the polynomial, division
         call div_poly again on the remainder:
 
-    >>> q2, r2 = div_poly(r, [1, 5])                                
-    >>> print(add_poly(q, q2), r2)
+    >>> q2, r = div_poly(r, [1, 5])                                
+    >>> print(add_poly(q, q2), r)
     [1. 4.] [0.]
 
         Therefore:
             x**2 + 9*x + 20 / (x + 5)
                 = x + 4
     """
+    C = np.array(C)
     D = np.array(D)
+    C = C[np.nonzero(C)[0][0]:]  # Remove any leading zeros
+    D = D[np.nonzero(D)[0][0]:]  # Remove any leading zeros
     r = len(C) - len(D)   # relative degree of numerator
     assert(r >= 0), "degree of numerator less than denominator"
     quotient = np.zeros(r + 1)
@@ -333,13 +336,24 @@ def test_div_poly():
     quotient, remainder = div_poly([4], [1, -0.8])
     assert quotient == [4.0]
     assert np.array_equal(remainder, [3.2])
+
+    # Example 1 from this video: https://www.youtube.com/watch?v=8lT00iLntFc
     C, D = [1, 9, 20], [1, 5]
     q, r = div_poly(C, D)
     assert np.array_equal(q, np.array([1., 0.]))
     assert np.array_equal(r, np.array([4., 20.]))
-    q2, r2 = div_poly(r, [1, 5])
+    q2, r = div_poly(r, D)
     assert np.array_equal(q2, np.array([4.]))
-    assert np.array_equal(r2, np.array([0.]))
+    assert np.array_equal(r, np.array([0.]))
+    
+    # Example 3 from this video: https://www.youtube.com/watch?v=8lT00iLntFc
+    C, D = [3, 0, 4, 0, -5, 8], [1, 0, 3]
+    q, r = div_poly(C, D)
+    assert np.array_equal(q, np.array([3., 0., 0., 0.]))
+    assert np.array_equal(r, np.array([ 0., -5., 0., -5., 8.]))
+    q2, r = div_poly(r, D)
+    assert np.array_equal(q2, np.array([-5., 0.]))
+    assert np.array_equal(r, np.array([ 0., 10., 8.]))
 
 
 def test_diophantine_recursive():
