@@ -51,7 +51,7 @@ Contents:
 import numpy as np
 
 
-def add_poly(a, b, align=-1):
+def add_poly(a, b, zero=-1):
     """Returns the subtraction of two polynomials.
 
         p = a + b 
@@ -62,16 +62,16 @@ def add_poly(a, b, align=-1):
 
     `a` and `b` do not need to be the same length.
 
-    Parameters:
+    Arguments:
         a : list or array
             Coefficients of a
         b : list or array
             Coefficients of b
-        align (int): 0 or -1
-            align=0 : indicates that the first items
-            in a and b correspond to terms having the
-            same power. align=-1 indicates that the 
-            last items are aligned.
+        zero (int): 0 or -1
+            zero=0 : indicates that the first value
+            in a and b corresponds to the coefficient
+            of the zeroth power. zero=-1 indicates
+            that the last value is the zeroth power.
 
     Returns:
         p : array
@@ -80,7 +80,7 @@ def add_poly(a, b, align=-1):
     Example:
     >>> add_poly([1, 4, 4], [4, 2])
     array([1., 8., 6.])
-    >>> add_poly([1, 0.2], [1, 0.1, 0.8], align=0)
+    >>> add_poly([1, 0.2], [1, 0.1, 0.8], zero=0)
     array([2. , 0.3, 0.8])
     """
     a, b = np.array(a), np.array(b)
@@ -89,18 +89,18 @@ def add_poly(a, b, align=-1):
         return a + b
     else:
         p = np.zeros(max((la, lb)))  # Always returns dtype float
-        if align == 0:
+        if zero == 0:
             p[:la] = a
             p[:lb] = p[:lb] + b
-        elif align == -1:
+        elif zero == -1:
             p[-la:] = a
             p[-lb:] = p[-lb:] + b
         else:
-            raise ValueError("Invalid value for align")
+            raise ValueError("Invalid value for zero")
         return p
 
 
-def sub_poly(a, b, align=-1):
+def sub_poly(a, b, zero=-1):
     """Returns the subtraction of two polynomials.
 
         p = a - b 
@@ -111,16 +111,16 @@ def sub_poly(a, b, align=-1):
 
     `a` and `b` do not need to be the same length.
 
-    Parameters:
+    Arguments:
         a : list or array
             Coefficients of a
         b : list or array
             Coefficients of b
-        align (int): 0 or -1
-            align=0 : indicates that the first items
-            in a and b correspond to terms having the
-            same power. align=-1 indicates that the 
-            last items are aligned.
+        zero (int): 0 or -1
+            zero=0 : indicates that the first value
+            in a and b corresponds to the coefficient
+            of the zeroth power. zero=-1 indicates
+            that the last value is the zeroth power.
 
     Returns:
         p : array
@@ -129,7 +129,7 @@ def sub_poly(a, b, align=-1):
     Example:
     >>> sub_poly([1, 4, 4], [4, 2])
     array([1., 0., 2.])
-    >>> sub_poly([1, 0.2], [1, 0.1, 0.8], align=0)
+    >>> sub_poly([1, 0.2], [1, 0.1, 0.8], zero=0)
     array([ 0. ,  0.1, -0.8])
     """
     a, b = np.array(a), np.array(b)
@@ -138,18 +138,18 @@ def sub_poly(a, b, align=-1):
         return a - b
     else:
         p = np.zeros(max((la, lb)))  # Always returns dtype float
-        if align == 0:
+        if zero == 0:
             p[:la] = a
             p[:lb] = p[:lb] - b
-        elif align == -1:
+        elif zero == -1:
             p[-la:] = a
             p[-lb:] = p[-lb:] - b
         else:
-            raise ValueError("Invalid value for align")
+            raise ValueError("Invalid value for zero")
         return p
 
 
-def div_poly(C, D):
+def div_poly(C, D, zero=-1):
     """Finds the first quotient and the remainder of a
     polynomial division:
     
@@ -159,10 +159,16 @@ def div_poly(C, D):
     polynomials represented as a list or array of 
     coefficients of decreasing powers.
 
-    Note: The last item in each list corresponds to
-    the coefficient of order 0 and all coefficients
-    between this and the highest order term must be
-    included. 
+    Arguments:
+        C : list or array
+            Coefficients of numerator polynomial.
+        D : list or array
+            Coefficients of denominator polynomial.
+        zero (int): 0 or -1
+            zero=0 : indicates that the first value
+            in a and b corresponds to the coefficient
+            of the zeroth power. zero=-1 indicates
+            that the last value is the zeroth power.
 
     Example:
         Find the quotient and remainder of the
@@ -188,32 +194,59 @@ def div_poly(C, D):
             x**2 + 9*x + 20 / (x + 5)
                 = x + 4
     """
-    C = np.array(C)
+    if np.array_equal(C, [0]):
+        return np.array([0]), np.array([0])
     D = np.array(D)
-    C = C[np.nonzero(C)[0][0]:]  # Remove any leading zeros
-    D = D[np.nonzero(D)[0][0]:]  # Remove any leading zeros
-    r = len(C) - len(D)   # relative degree of numerator
-    assert(r >= 0), "degree of numerator less than denominator"
-    quotient = np.zeros(r + 1)
-    quotient[0] = C[0] / D[0]
-    remainder = sub_poly(C, quotient[0] * D, align=0)
-    assert remainder[0] == 0
-    return quotient, remainder[1:]
+    if zero == 0:
+        if C[-1] == 0:
+            # Remove any trailing zeros
+            C = np.array(C)
+            C = C[:np.nonzero(C)[0][-1]+1]
+        if D[-1] == 0:
+            D = D[:np.nonzero(D)[0][-1]+1]
+        quotient = np.array([C[0] / D[0]])
+        remainder = sub_poly(C, quotient[0] * D, zero=0)
+        assert remainder[0] == 0
+        return quotient, remainder
+    if zero == -1:
+        if C[0] == 0:
+            # Remove any leading zeros
+            C = np.array(C)
+            C = C[np.nonzero(C)[0][0]:]
+        if D[-1] == 0:
+            D = D[np.nonzero(D)[0][0]:]
+        r = len(C) - len(D)   # relative degree of numerator
+        assert(r >= 0), "degree of numerator less than denominator"
+        # TODO: Implement case relative degree < 0
+        quotient = np.zeros(r + 1)
+        quotient[0] = C[0] / D[0]
+        remainder = sub_poly(C, quotient[0] * D, zero=0)
+        assert remainder[0] == 0
+        return quotient, remainder[1:]
+    else:
+        raise ValueError("Invalid value for zero")
+
+    # TODO: Consider replacing diophantine with div_poly function
+    # This should be equivalent:
+    # quotient, remainder = div_poly(C, D, zero=0)
+    # return quotient[0], remainder[1:]
+    # (but is raising an IndexError in one of the tests)
 
 
 def diophantine(C, D):
     """Solves the following diophantine equation:
     
-        C / D = quotient + remainder / D
+        C / D = F + z^-1 * M / D
     
-    where `C`, `D`, and `remainder` are polynomials
+    where `C`, `D`, and `M` are polynomials
     represented as a list or array of coefficients
-    in decreasing powers of z^-1.
+    in decreasing powers of z^-1. The first value 
+    in each must correspond to the same order of
+    z^-1.
     """
-    # TODO: Consider replacing this with div_poly function
     D = np.array(D)
     quotient = C[0] / D[0]
-    remainder = sub_poly(C, quotient * D, align=0)
+    remainder = sub_poly(C, quotient * D, zero=0)
     assert remainder[0] == 0
     return quotient, remainder[1:]
 
@@ -227,12 +260,14 @@ def diophantine_recursive(C, D, hp):
 
     for j = 1 to `hp`, where `C`, `D`, `F`, and `M` are
     polynomials represented as lists or arrays containing
-    the coefficients in decreasing powers of z^-1.
+    the coefficients in decreasing powers of z^-1.  The
+    first value in each must correspond to the same order
+    of z^-1.
 
     Arguments:
-        C : array_like
+        C : list or array
             Coefficients of `C`.
-        D : array_like
+        D : list or array
             Coefficients of `D`.
         hp : int
             Number of iterations of recursion.
@@ -279,14 +314,14 @@ def test_add_poly():
     assert np.array_equal(add_poly(a, a), [2., 4., 6.])
     assert np.array_equal(add_poly(b, b), [2., 4.])
     assert np.array_equal(add_poly(a, b), [1., 3., 5.])
-    assert np.array_equal(add_poly(a, b, align=0), [2., 4., 3.])
-    assert np.array_equal(add_poly(a, b, align=-1), [1., 3., 5.])
+    assert np.array_equal(add_poly(a, b, zero=0), [2., 4., 3.])
+    assert np.array_equal(add_poly(a, b, zero=-1), [1., 3., 5.])
     assert np.array_equal(add_poly(b, a), [1., 3., 5.])
-    assert np.array_equal(add_poly(b, a, align=0), [2., 4., 3.])
+    assert np.array_equal(add_poly(b, a, zero=0), [2., 4., 3.])
     a = np.array([0.5, -0.6, 0.7, -0.8])  # dtype: float
-    assert np.array_equal(add_poly(a, -a, align=0), [0., 0., 0., 0.])
-    assert np.array_equal(add_poly(a, b, align=0), [1.5, 1.4, 0.7, -0.8])
-    assert np.array_equal(add_poly(b, a, align=0), [1.5, 1.4, 0.7, -0.8])
+    assert np.array_equal(add_poly(a, -a, zero=0), [0., 0., 0., 0.])
+    assert np.array_equal(add_poly(a, b, zero=0), [1.5, 1.4, 0.7, -0.8])
+    assert np.array_equal(add_poly(b, a, zero=0), [1.5, 1.4, 0.7, -0.8])
 
 
 def test_sub_poly():
@@ -296,33 +331,20 @@ def test_sub_poly():
     a = [1, 2, 3]
     b = [1, 2]
     assert np.array_equal(sub_poly(a, a), [0., 0., 0.])
-    assert np.array_equal(sub_poly(a, a, align=0), [0., 0., 0.])
-    assert np.array_equal(sub_poly(a, a, align=-1), [0., 0., 0.])
+    assert np.array_equal(sub_poly(a, a, zero=0), [0., 0., 0.])
+    assert np.array_equal(sub_poly(a, a, zero=-1), [0., 0., 0.])
     assert np.array_equal(sub_poly(b, b), [0., 0.])
     assert np.array_equal(sub_poly(a, b), [1., 1., 1.])
-    assert np.array_equal(sub_poly(a, b, align=0), [0., 0., 3.])
-    assert np.array_equal(sub_poly(a, b, align=-1), [1., 1., 1.])
+    assert np.array_equal(sub_poly(a, b, zero=0), [0., 0., 3.])
+    assert np.array_equal(sub_poly(a, b, zero=-1), [1., 1., 1.])
     assert np.array_equal(sub_poly(b, a), [-1., -1., -1.])
-    assert np.array_equal(sub_poly(b, a, align=0), [0., 0., -3.])
+    assert np.array_equal(sub_poly(b, a, zero=0), [0., 0., -3.])
     a = np.array([0.5, -0.6, 0.7, -0.8])  # dtype: float
     assert np.array_equal(sub_poly(a, a), [0., 0., 0., 0.])
     assert np.array_equal(sub_poly(a, b), [ 0.5, -0.6, 0.7 - 1, -2.8])
-    assert np.array_equal(sub_poly(a, b, align=0), [-0.5, -2.6, 0.7, -0.8])
+    assert np.array_equal(sub_poly(a, b, zero=0), [-0.5, -2.6, 0.7, -0.8])
     assert np.array_equal(sub_poly(b, a), [-0.5, 0.6, 1 - 0.7, 2.8])
-    assert np.array_equal(sub_poly(b, a, align=0), [0.5, 2.6, -0.7, 0.8])
-
-
-def test_diophantine():
-    A = np.array([0.18, 1.14, 1.43, 0.48, 0.49])
-    quotient, remainder = diophantine(A, A)
-    assert quotient == 1.0
-    assert np.array_equal(remainder, np.zeros(len(A) - 1))
-    quotient, remainder = diophantine([0], [1, -0.8])
-    assert quotient == 0.0
-    assert np.array_equal(remainder, [0.0])
-    quotient, remainder = diophantine([4], [1, -0.8])
-    assert quotient == 4.0
-    assert np.array_equal(remainder, [3.2])
+    assert np.array_equal(sub_poly(b, a, zero=0), [0.5, 2.6, -0.7, 0.8])
 
 
 def test_div_poly():
@@ -330,12 +352,9 @@ def test_div_poly():
     quotient, remainder = div_poly(A, A)
     assert quotient == [1.0]
     assert np.array_equal(remainder, np.zeros(len(A) - 1))
-    quotient, remainder = div_poly([0], [1, -0.8])
+    quotient, remainder = div_poly([0], A)
     assert quotient == [0.0]
     assert np.array_equal(remainder, [0.0])
-    quotient, remainder = div_poly([4], [1, -0.8])
-    assert quotient == [4.0]
-    assert np.array_equal(remainder, [3.2])
 
     # Example 1 from this video: https://www.youtube.com/watch?v=8lT00iLntFc
     C, D = [1, 9, 20], [1, 5]
@@ -354,6 +373,30 @@ def test_div_poly():
     q2, r = div_poly(r, D)
     assert np.array_equal(q2, np.array([-5., 0.]))
     assert np.array_equal(r, np.array([ 0., 10., 8.]))
+
+    # Polynomials in z^-1
+    q, r = div_poly([1], [1, -1], zero=0)
+    assert np.array_equal(q, [1.])
+    assert np.array_equal(r, [0., 1.])
+    q, r = div_poly([0], [1., -1.], zero=0)
+    assert np.array_equal(q, [0])
+    assert np.array_equal(r, [0])
+    q, r = div_poly([4], [1, -0.8], zero=0)
+    assert np.array_equal(q, [4.0])
+    assert np.array_equal(r, [0, 3.2])
+
+
+def test_diophantine():
+    A = np.array([0.18, 1.14, 1.43, 0.48, 0.49])
+    quotient, remainder = diophantine(A, A)
+    assert quotient == 1.0
+    assert np.array_equal(remainder, np.zeros(len(A) - 1))
+    quotient, remainder = diophantine([0], [1, -0.8])
+    assert quotient == 0.0
+    assert np.array_equal(remainder, [0.0])
+    quotient, remainder = diophantine([4], [1, -0.8])
+    assert quotient == 4.0
+    assert np.array_equal(remainder, [3.2])
 
 
 def test_diophantine_recursive():
@@ -406,5 +449,7 @@ def test_diophantine_recursive():
 if __name__ == '__main__':
     # Run unit tests
     test_sub_poly()
+    test_add_poly()
+    test_div_poly()
     test_diophantine()
     test_diophantine_recursive()
