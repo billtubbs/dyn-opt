@@ -348,6 +348,30 @@ def test_sub_poly():
 
 
 def test_div_poly():
+    # TODO:
+    # Sympy has a polynomial division function:
+    #
+    # from sympy import *
+    # x = Symbol('x') 
+    # f = 3*x**5 + 4*x**3 - 5*x + 8
+    # g = x**2 + 3
+    # q, r = div(f, g, domain ='QQ')
+    # print(q, r)  # (3*x**3 - 5*x, 10*x + 8)
+    #
+    # Could use this instead, or at least for testing?
+
+    # It also has a polynomial manipulation module
+    # 
+    # from sympy import poly
+    # f = poly(3*x**5 + 4*x**3 - 5*x + 8)
+    # print(f.degree())  # 5
+    # print(f.all_coeffs())  # [3, 0, 4, 0, -5, 8]
+    # g = poly(x**2 + 3)
+    # q, r = f.div(g)
+    # print(q)  # Poly(3*x**3 - 5*x, x, domain='ZZ')
+    # print(r)  # Poly(10*x + 8, x, domain='ZZ')
+    # print(q.all_coeffs(), r.all_coeffs())  # [3, 0, -5, 0] [10, 8]
+
     A = np.array([0.18, 1.14, 1.43, 0.48, 0.49])
     quotient, remainder = div_poly(A, A)
     assert quotient == [1.0]
