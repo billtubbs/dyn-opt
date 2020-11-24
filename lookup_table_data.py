@@ -1,4 +1,5 @@
 import numpy as np
+from scipy import interpolate
 
 # Data from table 10.3 of notes from
 # GEL-2005 course on Linear Systems and Control
@@ -116,4 +117,8 @@ table2_data = np.array([
 ])
 
 
-
+# Define interpolation functions for value look-up
+table1_interp = interpolate.interp1d(table1_data[:,0], 
+                                     table1_data[:,1:], axis=0)
+table2_interp = interpolate.interp1d(table2_data[:,0], 
+                                     table2_data[:,1:], axis=0)
