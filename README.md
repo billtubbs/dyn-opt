@@ -6,17 +6,17 @@ and [dynamic optimization][3].
 
 1. Models
 
-    - [dynopt.models.models](dynopt.models.models) - A class of models for running model estimation and evaluation experiments with data
-    - [dynopt.models.sindy](dynopt.models.sindy) - Sparse non-linear identification algorithm (SINDy)
+    - [dynopt/models/models.py](dynopt/models/models.py) - A class of models for running model estimation and evaluation experiments with data
+    - [dynopt/models/sindy.py](dynopt/models/sindy.py) - Sparse non-linear identification algorithm (SINDy)
 
 2. Preprocessing utilities
 
-    - [dynopt.preprocessing.utils](dynopt.preprocessing.utils) - Functions for processing time-series data in preparation for model-fitting.
+    - [dynopt/preprocessing/utils.py](dynopt/preprocessing/utils.py) - Functions for processing time-series data in preparation for model-fitting.
 
 
 ## 1. Model Fitting
 
-The [Model](dynopt.models.models.Model) class and its sub-classes provide convenient
+The [Model](https://github.com/billtubbs/dyn-opt/blob/99ae5ace09f7bb33c779609374f5e9121267f96a/dynopt/models/models.py#L28) class and its sub-classes provide convenient
 interfaces for running model estimation and evaluation experiments with [Scikit-learn](https://scikit-learn.org/stable/) estimators.  They help you generate and fit models to data stored in [Pandas dataframes](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html) and also make it easier to reliably
 use the fitted models for online prediction.
 
