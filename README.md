@@ -6,17 +6,18 @@ and [dynamic optimization][3].
 
 1. Models
 
-    - [dynopt/models/models.py](dynopt/models/models.py) - A class of models for running model estimation and evaluation experiments with data
-    - [dynopt/models/sindy.py](dynopt/models/sindy.py) - Sparse non-linear identification algorithm (SINDy)
+    - [dynopt.models.models](src/dynopt/models/models.py) - Models for running model estimation and evaluation experiments with data
+    - [dynopt.models.sindy](src/dynopt/models/sindy.py) - Sparse non-linear identification algorithm (SINDy)
 
-2. Preprocessing utilities
+2. Data processing utilities
 
-    - [dynopt/preprocessing/utils.py](dynopt/preprocessing/utils.py) - Functions for processing time-series data in preparation for model-fitting.
+    - [dynopt.preprocessing.utils](src/dynopt/preprocessing/utils.py) - Functions for processing time-series data in preparation for model-fitting.
+    - [dynopt.preprocessing.sim_utils](src/dynopt/preprocessing/sim_utils.py) - Class for real-time data capture and visualization (TODO: move this into utils.py).
 
 
 ## 1. Model Fitting
 
-The [Model](https://github.com/billtubbs/dyn-opt/blob/99ae5ace09f7bb33c779609374f5e9121267f96a/dynopt/models/models.py#L28) class and its sub-classes provide convenient
+The [Model](https://github.com/billtubbs/dyn-opt/blob/master/src/dynopt/models/models.py#L28) class and its sub-classes provide convenient
 interfaces for running model estimation and evaluation experiments with [Scikit-learn](https://scikit-learn.org/stable/) estimators.  They help you generate and fit models to data stored in [Pandas dataframes](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html) and also make it easier to reliably
 use the fitted models for online prediction.
 
@@ -48,14 +49,14 @@ The following examples illustrate how these three model types can be used.
 For this example we download the Boston housing price dataset:
 
 ```python
-from sklearn.datasets import load_boston
+from sklearn.datasets import fetch_california_housing
 
 # Load dataset
-data = load_boston()
+data = fetch_california_housing()
 
-# Get data names
-feature_names = data.feature_names.tolist()
-target_name = 'MEDV'  # Median value of homes in $1000s
+# Define data names
+feature_names = data.feature_names
+target_name = 'MedHouseVal'  # Median value of homes in $1000s
 ```
 
 First, put the data into Pandas dataframes with appropriate column names:
@@ -65,20 +66,22 @@ X = pd.DataFrame(data.data, columns=feature_names)
 y = pd.DataFrame(data.target, columns=[target_name])
 
 print(X.head)
+```
 
-#       CRIM    ZN  INDUS  CHAS    NOX     RM   AGE     DIS  RAD    TAX  \
-# 0  0.00632  18.0   2.31   0.0  0.538  6.575  65.2  4.0900  1.0  296.0   
-# 1  0.02731   0.0   7.07   0.0  0.469  6.421  78.9  4.9671  2.0  242.0   
-# 2  0.02729   0.0   7.07   0.0  0.469  7.185  61.1  4.9671  2.0  242.0   
-# 3  0.03237   0.0   2.18   0.0  0.458  6.998  45.8  6.0622  3.0  222.0   
-# 4  0.06905   0.0   2.18   0.0  0.458  7.147  54.2  6.0622  3.0  222.0   
-# 
-#    PTRATIO       B  LSTAT  
-# 0     15.3  396.90   4.98  
-# 1     17.8  396.90   9.14  
-# 2     17.8  392.83   4.03  
-# 3     18.7  394.63   2.94  
-# 4     18.7  396.90   5.33  
+```
+   MedInc  HouseAge  AveRooms  AveBedrms  Population  AveOccup  Latitude  \
+0  8.3252      41.0  6.984127   1.023810       322.0  2.555556     37.88   
+1  8.3014      21.0  6.238137   0.971880      2401.0  2.109842     37.86   
+2  7.2574      52.0  8.288136   1.073446       496.0  2.802260     37.85   
+3  5.6431      52.0  5.817352   1.073059       558.0  2.547945     37.85   
+4  3.8462      52.0  6.281853   1.081081       565.0  2.181467     37.85   
+
+   Longitude  
+0    -122.23  
+1    -122.22  
+2    -122.24  
+3    -122.25  
+4    -122.25  
 ```
 
 The input (x) and output (y) data that you want to use can now be identified by 
@@ -86,15 +89,16 @@ the column names when initializing the model:
 
 ```python
 # Select desired inputs and outputs
-x_names = ['LSTAT', 'RM', 'TAX']
-y_names = ['MEDV']
+x_names = ['MedInc', 'HouseAge', 'AveRooms']
+y_names = [target_name]
 
 # Initialize model
 model = Model(x_names, y_names)  # by default uses a linear estimator
 print(model)
+```
 
-# Model(['LSTAT', 'RM', 'TAX'], ['MEDV'], estimator=LinearRegression(copy_X=True, 
-# fit_intercept=True, n_jobs=None, normalize=False))
+```
+Model(['MedInc', 'HouseAge', 'AveRooms'], ['MedHouseVal'], estimator=LinearRegression())
 ```
 
 The model is then fitted in a similar way to Scikit-Learn models except that
@@ -107,9 +111,27 @@ model.fit(X, y)
 
 # Fit score (R-squared)
 print(model.score(X, y))
-
-# 0.6485147669915273
 ```
+
+There is currently a bug!
+
+```
+ValueError: The feature names should match those that were passed during fit.
+Feature names unseen at fit time:
+- x0
+- x1
+- x2
+Feature names seen at fit time, yet now missing:
+- AveRooms
+- HouseAge
+- MedInc
+```
+
+Looks like scikit-learn implemented a form of feature names which is what
+this library does!  So it will need re-writing and maybe take advantage
+of this new feature.
+
+## TODO: Update below once code working
 
 Likewise, when predicting with the fitted model, only the relevant input data is 
 used by the model.  The predicted output is a dataframe:
