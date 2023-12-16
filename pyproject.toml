@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dynopt"
+version = "0.0.2"
+authors = [
+  { name="Bill Tubbs", email="bill.tubbs@me.com" },
+]
+description = "Python tools for non-linear function approximation, system identification and dynamic optimization."
+readme = "README.md"
+requires-python = ">=3.6"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+[project.urls]
+Homepage = "https://github.com/billtubbs/dyn-opt"
+Issues = "https://github.com/billtubbs/dyn-opt/issues"

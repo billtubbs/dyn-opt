@@ -7,7 +7,25 @@ from pandas.testing import assert_index_equal, assert_series_equal, \
 from numpy.testing import assert_array_equal, assert_array_almost_equal
 
 # Functions to test
-from dynopt.preprocessing.utils import *
+from dynopt.preprocessing.utils import (
+    add_derivatives_savgol,
+    add_differences,
+    add_ewmas,
+    add_filtered_values_savgol,
+    add_previous_values, 
+    add_rolling_averages, 
+    add_subsequent_values, 
+    add_timestep_indices, 
+    feature_array_from_expressions, 
+    feature_dataframe_from_expressions, 
+    name_with_t_inc, 
+    polynomial_feature_labels, 
+    polynomial_features, 
+    savgol_filter, 
+    split_name, 
+    t_inc_str, 
+    var_name_sequences
+)
 
 
 class PreprocessingTests(unittest.TestCase):
@@ -87,7 +105,7 @@ class PreprocessingTests(unittest.TestCase):
             'C[t-1]': {0: 'h', 1: 'e', 2: 'l', 3: 'l', 4: 'o'},
             'A[t+1]': {0: 51.0, 1: 52.0, 2: 53.0, 3: 54.0, 4: np.nan},
             'B[t+1]': {0: 101.0, 1: 102.0, 2: 103.0, 3: 104.0, 4: np.nan},
-            'C[t]': {0: 'e', 1: 'l', 2: 'l', 3: 'o', 4: np.nan}
+            'C[t]': {0: 'e', 1: 'l', 2: 'l', 3: 'o', 4: None}
         })
         data_add = add_subsequent_values(data, 1)
         assert_frame_equal(data_add, test_values)

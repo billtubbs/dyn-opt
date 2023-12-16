@@ -1,3 +1,23 @@
+#TODO: scikit-learn has now implement feature names and checking since I wrote this
+#      so needs a thorough review and possibly re-write.
+#  E.g. 
+# UserWarning: X has feature names, but LinearRegression was fitted without feature names
+# 
+# And
+# 
+# ValueError: The feature names should match those that were passed during fit.
+# Feature names unseen at fit time:
+# - x0
+# - x1
+# Feature names seen at fit time, yet now missing:
+# - x_0
+# - x_1
+#
+# Also:
+#  DeprecationWarning: is_sparse is deprecated and will be removed in a future version. 
+# From sklearn/utils/validation.py and pandas/core/algorithms.py but not sure which module is calling it.
+#
+
 import unittest
 import numpy as np
 import pandas as pd
@@ -130,13 +150,13 @@ class ModelTests(unittest.TestCase):
         prediction = model.predict(X_test)
         test_prediction = pd.DataFrame(test_prediction.reshape(-1, 1), 
                                        columns=['y0'])
-        assert_array_equal(prediction, test_prediction)
+        assert_array_almost_equal(prediction, test_prediction)
 
         # Test single predictions
         for i in X.index:
             x = {k: v for k, v in zip(model.x_names, X.loc[i].values)}
             y_pred = model.predict(x)
-            assert_array_equal(np.array(np.array(list(y_pred.values()))), y.loc[i].values)
+            assert_array_almost_equal(np.array(list(y_pred.values())), y.loc[i].values)
 
     def test_NonlinearModel_nonlinear(self):
 
@@ -186,16 +206,16 @@ class ModelTests(unittest.TestCase):
         # Test single-point predictions with dicts, series, etc.
         x2 = X.loc[2].to_dict()
         y2 = {'dx_1/dt': 2.0, 'dx_2/dt': 5.0}  # Y.loc[2].to_dict()
-        assert_series_equal(pd.Series(model.predict(x2)), pd.Series(y2))
+        assert_series_equal(pd.Series(model.predict(x2)), pd.Series(y2), atol=1e-15)
 
         x2 = X.loc[2]  # pd.Series
-        assert_series_equal(pd.Series(model.predict(x2)), pd.Series(y2))
+        assert_series_equal(pd.Series(model.predict(x2)), pd.Series(y2), atol=1e-15)
 
         x2 = X.loc[2].values  # np.ndarray
-        assert_series_equal(pd.Series(model.predict(x2)), pd.Series(y2))
+        assert_series_equal(pd.Series(model.predict(x2)), pd.Series(y2), atol=1e-15)
 
         x2 = X.loc[2].tolist()  # list
-        assert_series_equal(pd.Series(model.predict(x2)), pd.Series(y2))
+        assert_series_equal(pd.Series(model.predict(x2)), pd.Series(y2), atol=1e-15)
 
     def test_SparseNonLinearModel(self):
 
@@ -352,7 +372,7 @@ class ModelTests(unittest.TestCase):
         assert_series_equal(model.intercept_, intercept_test)
 
         # Test predictions
-        assert_frame_equal(model.predict(X_u), dXdt, check_less_precise=True)
+        assert_frame_equal(model.predict(X_u), dXdt, atol=0.0001)
 
         # Test R^2 calculation
         score = model.score(X_u, dXdt)
@@ -362,19 +382,19 @@ class ModelTests(unittest.TestCase):
         x2 = X_u.loc[2].to_dict()
         y2 = {'theta_dot': -0.97899, 'theta_ddot': 0.80954}  # Y.loc[2].to_dict()
         assert_series_equal(pd.Series(model.predict(x2)), 
-                            pd.Series(y2), check_less_precise=True)
+                            pd.Series(y2), atol=0.0001)
         
         x2 = X_u.loc[2]  # pd.Series
         assert_series_equal(pd.Series(model.predict(x2)), 
-                            pd.Series(y2), check_less_precise=True)
+                            pd.Series(y2), atol=0.0001)
 
         x2 = X_u.loc[2].values  # np.ndarray
         assert_series_equal(pd.Series(model.predict(x2)), 
-                            pd.Series(y2), check_less_precise=True)
+                            pd.Series(y2), atol=0.0001)
 
         x2 = X_u.loc[2].tolist()  # list
         assert_series_equal(pd.Series(model.predict(x2)), 
-                            pd.Series(y2), check_less_precise=True)
+                            pd.Series(y2), atol=0.0001)
 
     def test_NonlinearModel_with_scaling(self):
         # Simple test: y = 1 * x_0 + 200 * x_1 + 3
@@ -433,7 +453,7 @@ class ModelTests(unittest.TestCase):
         assert_array_almost_equal(model.estimator.coef_[0], test_coef_)
         self.assertAlmostEqual(model.estimator.intercept_[0], test_intercept_)
         assert_array_almost_equal(model_scaled1.estimator.coef_[0], [50., 141.42135624])
-        self.assertAlmostEqual(model_scaled1.estimator.intercept_[0], y.mean()[0])
+        self.assertAlmostEqual(model_scaled1.estimator.intercept_[0], y.values.mean())
         self.assertFalse(np.isclose(model_scaled1.estimator.coef_[0], test_coef_).all())
         self.assertFalse(np.isclose(model_scaled1.estimator.intercept_[0], 
                                     test_intercept_).all())
@@ -475,11 +495,15 @@ class ModelTests(unittest.TestCase):
         ])
         intercepts = np.array([ 0.04856, -0.0038 ])
 
-        model = LinearPredictionModel(coef=coefficients, intercept=intercepts)
+        model = LinearPredictionModel(coef_=coefficients, intercept_=intercepts)
         self.assertTrue(str(model).startswith("LinearPredictionModel"))
+        # TODO: on above line
+        # File "/Users/billtubbs/anaconda3/envs/torch/lib/python3.10/site-packages/sklearn/base.py", line 170, in get_params
+        #   value = getattr(self, key)
+        # AttributeError: 'LinearPredictionModel' object has no attribute 'coef'
         param_names = list(model.get_params().keys())
-        self.assertEqual(param_names, ['coef', 'intercept'])
-        model.set_params(coef=coefficients*2, intercept=intercepts+1)
+        self.assertEqual(param_names, ['coef_', 'intercept_'])
+        model.set_params(coef_=coefficients*2, intercept_=intercepts+1)
         #TODO: This method does not work (sets model.coef, model.intercept)
         #assert_array_equal(model.coef_, coefficients*2)
         #assert_array_equal(model.intercept_, intercepts+1)

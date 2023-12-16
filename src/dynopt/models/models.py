@@ -134,9 +134,9 @@ class Model:
         # Note: Can't use scikit learn Pipeline becuase it doesn't
         # support transformations to outputs (y)
         if self.input_scaler:
-            X = self.input_scaler.fit_transform(X.values.astype(np.float))
+            X = self.input_scaler.fit_transform(X.values.astype(float))
         if self.output_scaler:
-            y = self.output_scaler.fit_transform(y.values.astype(np.float))
+            y = self.output_scaler.fit_transform(y.values.astype(float))
         self.estimator.fit(X, y)
 
     def predict(self, X):
@@ -173,7 +173,7 @@ class Model:
             # point as a dataframe.
             # TODO: This is a big speed improvement but complex...
             if isinstance(X, dict):
-                x = np.array(list(X.values()), dtype=np.float).reshape(1, -1)
+                x = np.array(list(X.values()), dtype=float).reshape(1, -1)
             else:
                 x = X.values.reshape(1, -1)
             if self.input_scaler:
@@ -190,7 +190,7 @@ class Model:
             X = X[self.x_names].rename(columns=self._x_rename_map)
             if self.input_scaler:
                 # Apply the scaling to input data
-                X = self.input_scaler.transform(X.values.astype(np.float))
+                X = self.input_scaler.transform(X.values.astype(float))
             y = self.estimator.predict(X)
             if self.output_scaler:
                 # Reverse the scaling on output predictions
@@ -392,9 +392,9 @@ class NonLinearModel(Model):
         if self.input_transformer:
             X = self.input_transformer.fit_transform(X)
         if self.input_scaler:
-            X = self.input_scaler.fit_transform(X.values.astype(np.float))
+            X = self.input_scaler.fit_transform(X.values.astype(float))
         if self.output_scaler:
-            y = self.output_scaler.fit_transform(y.values.astype(np.float))
+            y = self.output_scaler.fit_transform(y.values.astype(float))
         self.estimator.fit(X, y)
 
     def predict(self, X):
@@ -435,7 +435,7 @@ class NonLinearModel(Model):
             ref_dict = {**x_values, **self.functions}
             # Calculate evaluated features
             x = [eval(expr, ref_dict) for expr in self.x_features]
-            x = np.array(x, dtype=np.float).reshape(1, -1)
+            x = np.array(x, dtype=float).reshape(1, -1)
             if self.input_scaler:
                 # Re-scale inputs
                 x = self.input_scaler.transform(x)
@@ -452,7 +452,7 @@ class NonLinearModel(Model):
                 X = self.input_transformer.transform(X)
             if self.input_scaler:
                 # Apply the scaling to input data
-                X = self.input_scaler.transform(X.values.astype(np.float))
+                X = self.input_scaler.transform(X.values.astype(float))
             y = self.estimator.predict(X)
             if self.output_scaler:
                 # Reverse the scaling on output predictions
@@ -621,9 +621,9 @@ class SparseNonLinearModel(NonLinearModel):
             X = self.input_transformer.fit_transform(X) 
         # Scale all inputs and outputs last
         if self.input_scaler:
-            X = self.input_scaler.fit_transform(X.values.astype(np.float))
+            X = self.input_scaler.fit_transform(X.values.astype(float))
         if self.output_scaler:
-            y = self.output_scaler.fit_transform(y.values.astype(np.float))
+            y = self.output_scaler.fit_transform(y.values.astype(float))
 
         # TODO: Is there a more efficient way to do this?
         #TODO: Ultimately, it would be nice to overload the LinearModel's
@@ -768,19 +768,19 @@ class LinearPredictionModel(LinearRegression):
         Independent term in the linear model.
     """
 
-    def __init__(self, coef=None, intercept=None):
-        if coef is not None:
-            coef = np.array(coef)
-            if intercept is None:
-                intercept = np.zeros(coef.shape[0])
+    def __init__(self, coef_=None, intercept_=None):
+        if coef_ is not None:
+            coef_ = np.array(coef_)
+            if intercept_ is None:
+                intercept_ = np.zeros(coef_.shape[0])
             else:
-                intercept = np.array(intercept)
-            assert coef.shape[0] == intercept.shape[0]
+                intercept_ = np.array(intercept_)
+            assert coef_.shape[0] == intercept_.shape[0]
         else:
-            if intercept is not None:
+            if intercept_ is not None:
                 raise ValueError("Provide coef only or both coef and intercept")
-        self.intercept_ = intercept
-        self.coef_ = coef
+        self.intercept_ = intercept_
+        self.coef_ = coef_
 
     def fit(self, X, y):
         """This model does not have a fit method."""
