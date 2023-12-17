@@ -9,7 +9,37 @@ from dynopt.preprocessing.sim_utils import DataLogger
 class DataLoggerTests(unittest.TestCase):
 
     def test_initialization(self):
-        initial_values = {'x': [0.0], 'y': [np.nan]}
+
+        # Empty data logger - no initial data
+        dl = DataLogger(columns=['x', 'y', 'm'])
+        assert dl.k_first == 0
+        assert dl.nT_init == 0
+        assert dl.k == -1
+        assert_frame_equal(
+            dl.data,
+            pd.DataFrame(
+                np.full((100, 4), np.nan),
+                index=pd.RangeIndex(0, 100, name='k'),
+                columns=['t', 'x', 'y', 'm']
+            )
+        )
+
+        # Empty data logger - alternative intialization
+        initial_values = {'x': [], 'y': [], 'm': []}
+        dl = DataLogger(initial_values)
+        assert dl.k_first == 0
+        assert dl.nT_init == 0
+        assert dl.k == -1
+        assert_frame_equal(
+            dl.data,
+            pd.DataFrame(
+                np.full((100, 4), np.nan),
+                index=pd.RangeIndex(0, 100, name='k'),
+                columns=['t', 'x', 'y', 'm']
+            )
+        )
+
+        initial_values = {'x': [0.0], 'y': [np.nan], 'm': ['ok']}
         dl = DataLogger(initial_values)
 
         assert dl.k_first == 0
@@ -17,7 +47,7 @@ class DataLoggerTests(unittest.TestCase):
         assert dl.k == 0
         assert dl.nT_max == 100
         assert dl.nT_ahead == 0
-        assert dl.data.shape == (dl.nT_max, 3)
+        assert dl.data.shape == (dl.nT_max, 4)
         assert_array_equal(dl.data.index.to_numpy(), np.arange(100))
         assert dl.data.index.name == 'k'
         assert_series_equal(
@@ -26,6 +56,10 @@ class DataLoggerTests(unittest.TestCase):
             check_names=False
         )
 
+        # DataFrame only works with one compatible dtype
+        # E.g. Value 'm': 'ok' raises FutureWarning:  Setting an item of incompatible 
+        # dtype is deprecated and will raise in a future error of pandas. Value 
+        # '['ok']' has dtype incompatible with float64 ...
         initial_values = {'t': 15.0, 'x': 0.0, 'y': np.nan}
         dl = DataLogger(initial_values, index=[0], nT_max=5)
         assert dl.k_first == 0
@@ -49,7 +83,8 @@ class DataLoggerTests(unittest.TestCase):
         initial_values = {
             't': [15.0, 16.5, 18.001], 
             'x': [0.0, 0.1, 0.2],
-            'y': [None, 1.5, None]
+            'y': [None, 1.5, None],
+            'm': ['bad', 'ok', 'bad']
         }
         dl = DataLogger(initial_values, nT_max=5)
         assert dl.k_first == 0
@@ -58,15 +93,20 @@ class DataLoggerTests(unittest.TestCase):
         assert_frame_equal(
             dl.data,
             pd.DataFrame(
-                np.array([
-                    [   15.0,   0.0, np.nan],
-                    [   16.5,   0.1,    1.5],
-                    [ 18.001,   0.2, np.nan],
-                    [np.nan, np.nan, np.nan],
-                    [np.nan, np.nan, np.nan]
-                ]),
+                {
+                    't': [   15.0,   16.5, 18.001, np.nan, np.nan],
+                    'x': [    0.0,    0.1,    0.2, np.nan, np.nan],
+                    'y': [ np.nan,    1.5, np.nan, np.nan, np.nan],
+                    'm': [  'bad',   'ok',  'bad', np.nan, np.nan],
+                },
+                #     [   15.0,   0.0, np.nan],
+                #     [   16.5,   0.1,    1.5],
+                #     [ 18.001,   0.2, np.nan],
+                #     [np.nan, np.nan, np.nan],
+                #     [np.nan, np.nan, np.nan]
+                # ]),
                 index=pd.RangeIndex(0, 5, name='k'),
-                columns=['t', 'x', 'y']
+                columns=['t', 'x', 'y', 'm']
             )
         )
 
@@ -163,6 +203,9 @@ class DataLoggerTests(unittest.TestCase):
 
         initial_values = {'t': [15.0], 'x': [0.0], 'y': [np.nan]}
         dl = DataLogger(initial_values, nT_max=5)
+        assert dl.k_first == 0
+        assert dl.nT_init == 1
+        assert dl.k == 0
 
         dl.append(16.5, {'x': 0.1, 'y': 1.5})
         assert dl.k == 1
@@ -220,22 +263,25 @@ class DataLoggerTests(unittest.TestCase):
             )
         )
 
-        # dl.reset()
-        # assert_frame_equal(
-        #     dl.data,
-        #     pd.DataFrame(
-        #         np.array([
-        #             [   10.,     0., np.nan],
-        #             [np.nan, np.nan, np.nan],
-        #             [np.nan, np.nan, np.nan],
-        #             [np.nan, np.nan, np.nan],
-        #             [np.nan, np.nan, np.nan]
-        #         ]),
-        #         index=pd.RangeIndex(0, 5, name='k'),
-        #         columns=['t', 'x', 'y']
-        #     )
-        # )
-        # assert dl.k == dl.k_first
+        dl.reset()
+        assert dl.k_first == 0
+        assert dl.nT_init == 1
+        assert dl.k == 0
+
+        assert_frame_equal(
+            dl.data,
+            pd.DataFrame(
+                np.array([
+                    [  15.0,    0.0, np.nan],
+                    [np.nan, np.nan, np.nan],
+                    [np.nan, np.nan, np.nan],
+                    [np.nan, np.nan, np.nan],
+                    [np.nan, np.nan, np.nan]
+                ]),
+                index=pd.RangeIndex(0, 5, name='k'),
+                columns=['t', 'x', 'y']
+            )
+        )
 
 
 if __name__ == "__main__":
