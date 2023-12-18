@@ -44,7 +44,7 @@ The following table summarizes the three main classes of models.
 The following examples illustrate how these three model types can be used.
 
 
-## Example 1 - Linear Regression with a Subset of Features
+### Example 1 - Linear Regression with a Subset of Features
 
 For this example we download the Boston housing price dataset:
 
@@ -131,7 +131,7 @@ Looks like scikit-learn implemented a form of feature names which is what
 this library does!  So it will need re-writing and maybe take advantage
 of this new feature.
 
-## TODO: Update below once code working
+### TODO: Update below once code working
 
 Likewise, when predicting with the fitted model, only the relevant input data is 
 used by the model.  The predicted output is a dataframe:
@@ -156,7 +156,7 @@ print(model.predict(x))
 # {'MEDV': 29.01211141973685}
 ```
 
-## Example 2 - Non-Linear Model Estimation
+### Example 2 - Non-Linear Model Estimation
 
 The `NonLinearModel` class in [models.py](/dynopt/models/models.py) allows you to specify features
 as calculated expressions of the input data.
@@ -256,7 +256,7 @@ Note that the estimated coefficients are very close to the coefficients in the
 original system equations above.
 
 
-## Example 3 - Sparse Identification of Non-linear Dynamics
+### Example 3 - Sparse Identification of Non-linear Dynamics
 
 The [Sparse Identification of Non-linear Dynamics algorithm (SINDy)][1] is a numerical 
 technique that automatically identifies unknown non-linear relationships when the 
@@ -311,7 +311,7 @@ print(model.coef_)
 Again, if you look at the original governing equations above, you can see that it 
 has identified the correct terms as well as the coefficients exactly.
 
-## References
+### References
 
 The SINDy code in this package is based on the methods and code provided in the book 
 [Data-Driven Science and Engineering: Machine Learning, Dynamical Systems, and Control (1st ed.) by Brunton, S. L., & Kutz, J. N. (2019)][1].
@@ -335,9 +335,107 @@ There is also an [official PySindy package][4] developed by Brian de Silva et al
 
 ## 2. Data Preprocessing
 
-The [dynopt.preprocessing.utils](dynopt.preprocessing.utils) module contains a variety
-of functions commonly used for preprocessing time-series data in preparation for 
-fitting dynamic models.
+### Data Logger
+
+The [`DataLogger`](https://github.com/billtubbs/dyn-opt/blob/559724d412f8720e7b5e0b85fe3e917a0d4db158/src/dynopt/preprocessing/sim_utils.py#L6C7-L6C17) class in [sim_utils.py](src/dynopt/preprocessing/sim_utils.py) is useful for real-time data acquisition and dynamic model calculations.  It contains a Pandas dataframe that is initialized with a time-step index named 'k' and time instances 't' and let's you append data sequentially. You can specify the length of the dataframe (`nT_max = 100` rows by default), and when it is full it will scroll the data, aways keeping the previous `nT_max` rows.
+
+#### Basic usage
+
+```python
+from dynopt.preprocessing.sim_utils import DataLogger
+
+dl = DataLogger(columns=['u', 'x', 'y'])
+print(dl.data.shape)
+print(dl.data.head())
+```
+
+```text
+(100, 4)
+    t   u   x   y
+k                
+0 NaN NaN NaN NaN
+1 NaN NaN NaN NaN
+2 NaN NaN NaN NaN
+3 NaN NaN NaN NaN
+4 NaN NaN NaN NaN
+```
+
+```python
+dl.append({'t': 0.0, 'u': 1.0, 'x': 0.5, 'y': 2.0})
+print(dl.data.head())
+```
+
+```text
+     t    u    x    y
+k                    
+0  0.0  1.0  0.5  2.0
+1  NaN  NaN  NaN  NaN
+2  NaN  NaN  NaN  NaN
+3  NaN  NaN  NaN  NaN
+4  NaN  NaN  NaN  NaN
+```
+
+Example of setting up a logger with pre-history.
+
+```python
+initial_values = {'u': 0, 'x': 0, 'y': 0}
+dl = DataLogger(initial_values, index=[-2, -1, 0], sample_time=1.5, nT_max=10)
+print(dl.data)
+```
+
+```text
+-2 -3.0  0.0  0.0  0.0
+-1 -1.5  0.0  0.0  0.0
+0   0.0  0.0  0.0  0.0
+1   NaN  NaN  NaN  NaN
+2   NaN  NaN  NaN  NaN
+3   NaN  NaN  NaN  NaN
+4   NaN  NaN  NaN  NaN
+5   NaN  NaN  NaN  NaN
+6   NaN  NaN  NaN  NaN
+7   NaN  NaN  NaN  NaN
+```
+
+Note that in this case it pre-populated the dataframe with the initial-values and computed the time values (`t`).
+
+This is useful when you want to simulate an auto-regressive model for example:
+```python
+x = dl.data['x']
+y = dl.data['y']
+input_data = [
+    [1.5, 1.0],
+    [3.0, 1.0],
+    [4.5, 1.0],
+    [6.0, 1.0],
+    [6.5, 1.0]
+]
+for t, uk in input_data:
+    dl.append({'t': t, 'u': uk})
+    k = dl.k
+    x[k] = 0.3 * x[k-1] + 0.2 * x[k-2] + 0.5 * uk
+    y[k] = 2.0 * x[k]
+print(dl.data)
+```
+
+```text
+      t    u        x       y
+k                            
+-2 -3.0  0.0  0.00000  0.0000
+-1 -1.5  0.0  0.00000  0.0000
+0   0.0  0.0  0.00000  0.0000
+1   1.5  1.0  0.50000  1.0000
+2   3.0  1.0  0.65000  1.3000
+3   4.5  1.0  0.79500  1.5900
+4   6.0  1.0  0.86850  1.7370
+5   6.5  1.0  0.91955  1.8391
+6   NaN  NaN      NaN     NaN
+7   NaN  NaN      NaN     NaN
+```
+
+### Data Pre-processing tools
+
+[utils.py](dynopt/preprocessing/utils.py) contains a variety of functions commonly used for 
+preprocessing time-series data in preparation for fitting dynamic models.
 
  - `split_name(name)`
  - `t_inc_str(inc)`
