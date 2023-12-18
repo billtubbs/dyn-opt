@@ -33,27 +33,6 @@ class DataLogger():
         self.nT_init = nT_init
         self.k = k
 
-    def append(self, *args):
-        if len(args) == 2:
-            rows = [args]
-        elif len(args) == 1:
-            if isinstance(args[0], list):
-                rows = args[0]
-            #TODO: Support dataframes
-            else:
-                d = dict(args[0])
-                rows = [(d[self.t_name], {k: d[k] for k in d if k != self.t_name})]
-        else:
-            raise TypeError("invalid arguments")
-        for t, data in rows:
-            self.k += 1
-            if self.k > self.data.index[-1] - self.nT_ahead:
-                self.data = self.data.shift(-1)
-                self.data.index += 1
-            for name in data:
-                self.data.loc[self.k, name] = data[name]
-            self.data.loc[self.k, self.t_name] = t
-
     def _initialize_df(initial_data, sample_time, t_name, ts_name, k_first, 
                        nT_max, nT_ahead, **kwargs):
 
@@ -96,6 +75,27 @@ class DataLogger():
         k = k_first + nT_init - 1
 
         return df, k_first, nT_init, k
+
+    def append(self, *args):
+        if len(args) == 2:
+            rows = [args]
+        elif len(args) == 1:
+            if isinstance(args[0], list):
+                rows = args[0]
+            #TODO: Support dataframes
+            else:
+                d = dict(args[0])
+                rows = [(d[self.t_name], {k: d[k] for k in d if k != self.t_name})]
+        else:
+            raise TypeError("invalid arguments")
+        for t, data in rows:
+            self.k += 1
+            if self.k > self.data.index[-1] - self.nT_ahead:
+                self.data = self.data.shift(-1)
+                self.data.index += 1
+            for name in data:
+                self.data.loc[self.k, name] = data[name]
+            self.data.loc[self.k, self.t_name] = t
 
     def reset(self):
 
