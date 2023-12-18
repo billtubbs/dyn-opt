@@ -384,6 +384,8 @@ print(dl.data)
 ```
 
 ```text
+      t    u    x    y
+k                     
 -2 -3.0  0.0  0.0  0.0
 -1 -1.5  0.0  0.0  0.0
 0   0.0  0.0  0.0  0.0
@@ -396,12 +398,10 @@ print(dl.data)
 7   NaN  NaN  NaN  NaN
 ```
 
-Note that in this case it pre-populated the dataframe with the initial-values and computed the time values (`t`).
+Note that in this case it pre-populated the dataframe with the initial-values and computed the time values (`t`) using the given sampling period.
 
 This is useful when you want to simulate an auto-regressive model for example:
 ```python
-x = dl.data['x']
-y = dl.data['y']
 input_data = [
     [1.5, 1.0],
     [3.0, 1.0],
@@ -409,6 +409,8 @@ input_data = [
     [6.0, 1.0],
     [6.5, 1.0]
 ]
+x = dl.data['x']
+y = dl.data['y']
 for t, uk in input_data:
     dl.append({'t': t, 'u': uk})
     k = dl.k
