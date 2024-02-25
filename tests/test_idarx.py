@@ -20,7 +20,7 @@ class IdArxTests(unittest.TestCase):
     def test_idarx(self):
 
         na = 2; nb = 2; nk = 3
-        p, covp, Vres = idarx([na, nb, nk], self.id_data.u, self.id_data.y)
+        p, covp, vres = idarx([na, nb, nk], self.id_data.u, self.id_data.y)
 
         assert np.max(np.abs(p - np.array([
             # Output from Octave/Matlab script idarx1.m
@@ -31,6 +31,18 @@ class IdArxTests(unittest.TestCase):
             p,
             [-1.7865736424,  0.8101952592, -0.3842601544,  0.4073825150]
         )
+
+        assert_array_almost_equal(
+            covp,
+            np.array([
+                [ 5.079376e-03, -5.012962e-03, -2.024573e-03,  2.107575e-03],
+                [-5.012962e-03,  5.077026e-03,  2.107429e-03, -2.092299e-03],
+                [-2.024573e-03,  2.107429e-03,  3.195526e-01, -3.195038e-01],
+                [ 2.107575e-03, -2.092299e-03, -3.195038e-01,  3.243571e-01]
+            ])
+        )
+
+        assert np.isclose(vres, 2.134978e+01)
 
     def test_idarxct(self):
 

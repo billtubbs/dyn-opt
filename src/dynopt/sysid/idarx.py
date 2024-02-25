@@ -5,7 +5,7 @@ import scipy
 def idarx(nn, u, y):
     """Function to estimate the parameters of a dynamic ARX model
     from time series data.  Also computes the covariance matrix
-    (covp) and the sum of the squared residuals (Vres).
+    (covp) and the sum of the squared residuals (vres).
 
     Arguments:
         nn : list or array
@@ -44,22 +44,22 @@ def idarx(nn, u, y):
     errors = Y - phi @ p
 
     # Sum-squared of residuals (minimization criterion)
-    Vres = errors.T @ errors
+    vres = errors.T @ errors
 
     # Estimate of the white noise variance
-    var_e = 1 / (n - len(p)) * Vres
+    var_e = 1 / (n - len(p)) * vres
 
     # Covariance matrix of parameter estimates
     covp = var_e * np.linalg.inv(phi.T @ phi)
 
-    return p, covp, Vres
+    return p, covp, vres
 
 
 def idarxct(nn, u, y, F, G):
 
     """Function to estimate the parameters of a dynamic ARX model
     from time series data.  Also computes the covariance matrix
-    (covp) and the sum of the squared residuals (Vres).
+    (covp) and the sum of the squared residuals (vres).
 
     Arguments:
         nn : list or array
