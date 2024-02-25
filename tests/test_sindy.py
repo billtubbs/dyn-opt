@@ -9,10 +9,11 @@ from dynopt.models.sindy import sparsify_dynamics_lstsq
 from dynopt.preprocessing.utils import polynomial_features, \
                                 polynomial_feature_labels
 
+
 class SindyTests(unittest.TestCase):
 
     def setUp(self):
-        pass
+        pass  # TODO: why?
 
         # Simulation setup
         self.dt = 0.01

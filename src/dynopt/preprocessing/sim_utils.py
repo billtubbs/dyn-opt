@@ -70,7 +70,11 @@ class DataLogger():
                 new_index = pd.RangeIndex(k_first, k_first + nT_max, name=ts_name)
                 kwargs_mod = {k: v for k, v in kwargs.items() if k not in ['index', 'columns']}
                 new_df = pd.DataFrame(np.nan, index=new_index, columns=df.columns, **kwargs_mod)
-                new_df.loc[df.index] = df.values
+                new_df.loc[df.index] = df.values  #TODO: This raises the following warning during
+                # the test:
+                # FutureWarning: Setting an item of incompatible dtype is deprecated and will raise 
+                # in a future error of pandas. Value '['bad', 'ok', 'bad']' has dtype incompatible 
+                # with float64, please explicitly cast to a compatible dtype first.
                 df = new_df
         k = k_first + nT_init - 1
 
