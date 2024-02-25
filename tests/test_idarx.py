@@ -3,10 +3,10 @@ import unittest
 import numpy as np
 from numpy.testing import assert_array_almost_equal, assert_array_equal
 import pandas as pd
-from dynopt.sysid.idarx import idarx, idarxct
+from dynopt.sysid.idarx import idar, idarx, idarxct
 
 
-class IdArxTests(unittest.TestCase):
+class AutoRegressiveSysIdTests(unittest.TestCase):
 
     def setUp(self):
 
@@ -16,6 +16,19 @@ class IdArxTests(unittest.TestCase):
         filename = 'TP04_Q3.csv'
         self.id_data = pd.read_csv(os.path.join(data_dir, filename))
         assert self.id_data.shape == (75, 2)
+
+    def test_idar(self):
+
+        # Based on Exercise 3.7 (a) from GEL-7063 course
+
+        na = 1; nb = 1; nc = 1
+        y = [0.73, 0.18, -0.36, 0.92, 1.12]
+        [p, covp, vres] = idar([na, nb, nc], y)
+
+        # Values from Matlab/Octave
+        assert np.array_equal(p, [-0.496853305651074])
+        assert np.array_equal(covp, [[0.4070827090837621]])
+        assert vres == 1.882309738532408
 
     def test_idarx(self):
 

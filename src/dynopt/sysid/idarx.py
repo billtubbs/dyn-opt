@@ -2,6 +2,51 @@ import numpy as np
 import scipy
 
 
+def idar(nn, y):
+    """Function to estimate the parameters of a dynamic AR model
+    from time series data.  Also computes the covariance matrix
+    (covp) and the sum of the squared residuals (vres).
+
+    Arguments:
+        nn : list or array
+            Structure of the model to be estimated: [na, nb, nk].
+        y : array (m, )
+            Output time series.
+
+    """
+
+    # AR model structure
+    na = nn[0]
+    assert na > 0
+    m = len(y)
+
+    # Construct data matrices
+    Y = np.flip(scipy.linalg.hankel(y[:na], y[na - 1:]).T, axis=1)[:m - na + 1, :]
+
+    # Phi, Y matrices
+    n = m - na
+    phi = -Y[-n-1:-1, :]
+    Y = y[-n:]
+
+    # Estimate parameters using ordinary least squares
+    # p = np.linalg.inv(phi.T @ phi) @ phi.T @ Y
+    p = np.linalg.solve(phi.T @ phi, phi.T @ Y)
+
+    # Residuals
+    errors = Y - phi @ p
+
+    # Sum-squared of residuals (minimization criterion)
+    vres = errors.T @ errors
+
+    # Estimate of the white noise variance
+    var_e = 1 / (n - len(p)) * vres
+
+    # Covariance matrix of parameter estimates
+    covp = var_e * np.linalg.inv(phi.T @ phi)
+
+    return p, covp, vres
+
+
 def idarx(nn, u, y):
     """Function to estimate the parameters of a dynamic ARX model
     from time series data.  Also computes the covariance matrix
