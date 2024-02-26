@@ -9,7 +9,7 @@ def idar(nn, y):
 
     Arguments:
         nn : list or array
-            Structure of the model to be estimated: [na, nb, nk].
+            Structure of the model to be estimated: [na].
         y : array (m, )
             Output time series.
 
