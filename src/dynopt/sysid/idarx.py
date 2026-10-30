@@ -1,3 +1,14 @@
+"""Least-squares estimation of single-input, single-output AR and ARX
+models from time series data.
+
+Contents:
+- idar(nn, y): AR model, structure [na]; returns the parameters, their
+  covariance matrix and the sum of squared residuals.
+- idarx(nn, u, y): ARX model, structure [na, nb, nk]; returns the same.
+- idarxct(nn, u, y, F, G): ARX model with linear equality constraints
+  F p = G on the parameters; returns the parameters.
+"""
+
 import numpy as np
 import scipy
 
@@ -21,11 +32,13 @@ def idar(nn, y):
     m = len(y)
 
     # Construct data matrices
-    Y = np.flip(scipy.linalg.hankel(y[:na], y[na - 1:]).T, axis=1)[:m - na + 1, :]
+    Y = np.flip(scipy.linalg.hankel(y[:na], y[na - 1 :]).T, axis=1)[
+        : m - na + 1, :
+    ]
 
     # Phi, Y matrices
     n = m - na
-    phi = -Y[-n-1:-1, :]
+    phi = -Y[-n - 1 : -1, :]
     Y = y[-n:]
 
     # Estimate parameters using ordinary least squares
@@ -73,12 +86,16 @@ def idarx(nn, u, y):
     assert len(y) == m
 
     # Construct data matrices
-    U = np.flip(scipy.linalg.hankel(u[:nb], u[nb - 1:]).T, axis=1)[:m - nb + 1, :]
-    Y = np.flip(scipy.linalg.hankel(y[:na], y[na - 1:]).T, axis=1)[:m - na + 1, :]
+    U = np.flip(scipy.linalg.hankel(u[:nb], u[nb - 1 :]).T, axis=1)
+    Y = np.flip(scipy.linalg.hankel(y[:na], y[na - 1 :]).T, axis=1)
 
     # Phi, Y matrices
     n = m - max(na, nb + nk - 1)
-    phi = np.concatenate([-Y[-n-1:-1, :], U[-n-nk:-nk, :]], axis=1)
+    NY = Y.shape[0]  # = m - na + 1
+    NU = U.shape[0]  # = m - nb + 1
+    phi = np.concatenate(
+        [-Y[NY - n - 1 : NY - 1, :], U[NU - n - nk : NU - nk, :]], axis=1
+    )
     Y = y[-n:]
 
     # Estimate parameters using ordinary least squares
@@ -101,7 +118,6 @@ def idarx(nn, u, y):
 
 
 def idarxct(nn, u, y, F, G):
-
     """Function to estimate the parameters of a dynamic ARX model
     from time series data.  Also computes the covariance matrix
     (covp) and the sum of the squared residuals (vres).
@@ -131,34 +147,39 @@ def idarxct(nn, u, y, F, G):
     assert len(y) == m
 
     # Construct data matrices
-    U = np.flip(scipy.linalg.hankel(u[:nb], u[nb - 1:]).T, axis=1)[:m - nb + 1, :]
-    Y = np.flip(scipy.linalg.hankel(y[:na], y[na - 1:]).T, axis=1)[:m - na + 1, :]
+    U = np.flip(scipy.linalg.hankel(u[:nb], u[nb - 1 :]).T, axis=1)
+    Y = np.flip(scipy.linalg.hankel(y[:na], y[na - 1 :]).T, axis=1)
 
     # Phi, Y matrices
     n = m - max(na, nb + nk - 1)
-    phi = np.concatenate([-Y[-n-1:-1, :], U[-n-nk:-nk, :]], axis=1)
+    NY = Y.shape[0]  # = m - na + 1
+    NU = U.shape[0]  # = m - nb + 1
+    phi = np.concatenate(
+        [-Y[NY - n - 1 : NY - 1, :], U[NU - n - nk : NU - nk, :]], axis=1
+    )
     Y = y[-n:]
 
     # Estimate parameters using ordinary least squares
     # with explicit constraints (Lagrangian)
     phi_t = np.transpose(phi)
     phi_t_phi = phi_t @ phi
-    solve_phi_t_phi_div_phi_t_Y = np.linalg.solve(phi_t_phi, phi_t @ Y).reshape(-1, 1)
-    p = (solve_phi_t_phi_div_phi_t_Y
-        - np.linalg.solve(
-            phi_t_phi,
-            F.T @ np.linalg.solve(
-                F @ np.linalg.solve(phi_t_phi, F.T), 
-                F @ solve_phi_t_phi_div_phi_t_Y - G
-            )
-        )
+    solve_phi_t_phi_div_phi_t_Y = np.linalg.solve(
+        phi_t_phi, phi_t @ Y
+    ).reshape(-1, 1)
+    p = solve_phi_t_phi_div_phi_t_Y - np.linalg.solve(
+        phi_t_phi,
+        F.T
+        @ np.linalg.solve(
+            F @ np.linalg.solve(phi_t_phi, F.T),
+            F @ solve_phi_t_phi_div_phi_t_Y - G,
+        ),
     )
     assert p.shape[1] == 1
     p = p.reshape(-1)
 
     # Matlab expression:
-    #p = phi' * phi \ (phi' * Y) - phi' * phi \ (...
+    # p = phi' * phi \ (phi' * Y) - phi' * phi \ (...
     #    F' * ((F * ((phi' * phi) \ F')) \ (F * ((phi' * phi) \ (phi' * Y)) - G)) ...
-    #);
+    # );
 
     return p
