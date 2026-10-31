@@ -1,5 +1,39 @@
-"""Least-squares estimation of single-input, single-output AR and ARX
-models from time series data.
+"""Functions to estimate the parameters of single-input, single-output
+AR and ARX models from time series data using least-squares.
+
+The polynomial function for the ARX model is defined:
+
+    A(q^-1) y(k) = B(q^-1) q^-nk u(k) + e(k)
+
+where
+
+    A(q^-1) = 1 + a_1 q^-1 + ... + a_na q^-na
+    B(q^-1) = b_1 + b_2 q^-1 + ... + b_nb q^-(nb-1)
+    q^-1 is the backwards shift operator
+    y(k) is the output at time instant k
+    u(k) is the input at time instant k
+    e(k) is the error (white noise) at time instant k
+
+The AR model has no exogenous input (i.e. nb = 0).
+
+The parameter vector is defined:
+
+    p = [a1, ..., a_na, b1, ..., b_nb].
+
+The noise-free output is y = filter([zeros(1, nk), B], [1, A], u) in
+Matlab/Octave (scipy.signal.lfilter in Python). nk = 0 means u(k) acts
+on y(k) directly.
+
+Comparing with Matlab and Octave arx():
+- Matlab (System Identification Toolbox): same convention. nk is the
+  number of leading zeros of B, so arx(data, [na nb nk]) estimates the
+  same model as idarx([na, nb, nk], u, y).
+- Octave (control package, checked with version 4.1.1): nk is one less
+  than here. Octave's arx() always delays the input one step and adds
+  nk steps to that, so arx(dat, 'na', na, 'nb', nb, 'nk', nk) estimates
+  the same model as idarx([na, nb, nk + 1], u, y). Its default, nk = 0,
+  is the usual one-step delay, and it can't estimate a model with
+  direct transmission (nk = 0 here). Its documentation doesn't say so.
 
 Contents:
 - idar(nn, y): AR model, structure [na]; returns the parameters, their
