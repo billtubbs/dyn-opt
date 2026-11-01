@@ -14,6 +14,11 @@ and [dynamic optimization][3].
     - [dynopt.preprocessing.utils](src/dynopt/preprocessing/utils.py) - Functions for processing time-series data in preparation for model-fitting.
     - [dynopt.preprocessing.sim_utils](src/dynopt/preprocessing/sim_utils.py) - Class for real-time data capture and visualization (TODO: move this into utils.py).
 
+3. Linear system identification
+
+    - [dynopt.sysid.idarx](src/dynopt/sysid/idarx.py) - AR and ARX models by least squares (`idar`, `idarx`, and `idarxct` with linear constraints on the parameters)
+    - [dynopt.sysid.idarmax](src/dynopt/sysid/idarmax.py) - ARMAX models by extended least squares and Gauss-Newton iterations (`idarmax`)
+
 
 ## 1. Model Fitting
 
@@ -459,3 +464,54 @@ preprocessing time-series data in preparation for fitting dynamic models.
  
 Please refer to the docstrings in [dynopt/preprocessing/utils.py](dynopt/preprocessing/utils.py)
 for details on these functions.
+
+
+## 3. Linear System Identification
+
+The functions in [dynopt.sysid](src/dynopt/sysid) estimate single-input,
+single-output polynomial models from input-output data. The ARX model is
+
+    A(q^-1) y(k) = B(q^-1) q^-nk u(k) + e(k)
+
+with `A = 1 + a_1 q^-1 + ... + a_na q^-na` and
+`B = b_1 + b_2 q^-1 + ... + b_nb q^-(nb-1)`, so the noise-free output is
+`scipy.signal.lfilter(np.r_[np.zeros(nk), B], np.r_[1, A], u)`. `nk = 0`
+means direct transmission.
+
+```python
+import numpy as np
+from scipy.signal import lfilter
+from dynopt.sysid.idarx import idarx
+
+# Data from y(k) = 0.7 y(k-1) + 0.5 u(k-1) + 0.2 u(k-2) + e(k)
+rng = np.random.default_rng(0)
+u = rng.choice([-1.0, 1.0], size=500)
+e = 0.05 * rng.standard_normal(500)
+y = lfilter([0, 0.5, 0.2], [1, -0.7], u) + lfilter([1], [1, -0.7], e)
+
+p, covp, vres = idarx([1, 2, 1], u, y)  # [na, nb, nk]
+print(p.round(3), np.sqrt(np.diag(covp)).round(3))
+# [-0.699  0.5    0.197] [0.003 0.002 0.003]
+```
+
+Each function returns the parameters `p = [a_1, ..., a_na, b_1, ..., b_nb]`
+(then `c_1, ..., c_nc` for ARMAX), their covariance matrix `covp` and the
+sum of squared residuals `vres` (`idarxct` returns only `p`).
+`print_arx_params` prints the parameters with their standard errors.
+
+- **ARMAX** (`idarmax([na, nb, nc, nk], u, y)`): the noise is coloured,
+  `C(q^-1) e(k)`. Ordinary least squares can't estimate C (the past noise
+  values aren't measured), and gives biased A and B. `idarmax` starts from
+  extended least squares (the residuals stand in for the noise) and refines
+  the estimates by Gauss-Newton iterations on the prediction errors.
+  [tests/test_idarmax.py](tests/test_idarmax.py) compares it with
+  statsmodels' `SARIMAX`.
+- **MATLAB and Octave:** `idarx([na, nb, nk], u, y)` estimates the same
+  model as MATLAB's `arx(data, [na nb nk])`. Octave's `arx` (control
+  package 4.1.1) counts the delay one less: its `nk` equals `nk - 1` here,
+  and it can't estimate direct transmission. See the docstring of
+  [idarx.py](src/dynopt/sysid/idarx.py).
+
+The tests in [tests/test_idarx_lfilter.py](tests/test_idarx_lfilter.py)
+are based on the MATLAB script `ex_mco_procede.m` from the GEL-7017
+system identification course.
