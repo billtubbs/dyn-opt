@@ -58,6 +58,18 @@ def idar(nn, y):
         y : array (m, )
             Output time series.
 
+    Returns:
+        p : array (na, )
+            Parameters [a1, ..., a_na].
+        covp : array (na, na)
+            Covariance matrix of the parameter estimates,
+            var_e * inv(phi' phi), where var_e = vres / (n - na) is the
+            estimated noise variance.
+        vres : float
+            Sum of the squared residuals y(k) - phi(k)' p of the
+            least-squares fit (the minimized criterion), over the
+            n = m - na time steps used in the fit.
+
     """
 
     # AR model structure
@@ -107,6 +119,18 @@ def idarx(nn, u, y):
         y : array (m, )
             Output time series.
 
+    Returns:
+        p : array (na + nb, )
+            Parameters [a1, ..., a_na, b1, ..., b_nb].
+        covp : array (na + nb, na + nb)
+            Covariance matrix of the parameter estimates,
+            var_e * inv(phi' phi), where var_e = vres / (n - na - nb) is
+            the estimated noise variance.
+        vres : float
+            Sum of the squared residuals y(k) - phi(k)' p of the
+            least-squares fit (the minimized criterion), over the
+            n = m - max(na, nb + nk - 1) time steps used in the fit.
+
     """
 
     # ARX model structure
@@ -153,8 +177,8 @@ def idarx(nn, u, y):
 
 def idarxct(nn, u, y, F, G):
     """Function to estimate the parameters of a dynamic ARX model
-    from time series data.  Also computes the covariance matrix
-    (covp) and the sum of the squared residuals (vres).
+    from time series data, subject to linear equality constraints
+    F p = G on the parameters.
 
     Arguments:
         nn : list or array
@@ -163,10 +187,16 @@ def idarxct(nn, u, y, F, G):
             Input time series.
         y : array (m, )
             Output time series.
-        F : array (1, na+nb)
-            Constraint equation coefficients.
-        G : array (na+nb, 1)
+        F : array (nc, na+nb)
+            Constraint equation coefficients (one row per constraint).
+        G : array (nc, 1)
             Constraint equation constants.
+
+    Returns:
+        p : array (na + nb, )
+            Parameters [a1, ..., a_na, b1, ..., b_nb]. Unlike idarx,
+            the covariance matrix and the sum of the squared residuals
+            are not returned.
 
     """
 
@@ -217,3 +247,25 @@ def idarxct(nn, u, y, F, G):
     # );
 
     return p
+
+
+def print_arx_params(na, nb, p, covp, vres=None):
+    """Print the parameter values in p with the standard error range.
+
+    Example
+    >>> print_arx_params(na, nb, p, covp)
+    a0:  -1.234 ± 0.03222
+    a1:  0.3074 ± 0.02973
+    b2: -0.2776 ± 0.01214
+
+    """
+    std_err = np.sqrt(np.diagonal(covp))
+    for i in range(na + nb):
+        if i < na:
+            symbol = "a"
+        else:
+            symbol = "b"
+        warn = " *" if abs(std_err[i]) >= abs(p[i]) else ""
+        print(f"{symbol}{i + 1}: {p[i]:8.4g} ± {std_err[i]:8.4g}{warn}")
+    if vres is not None:
+        print(f"sum sq. res.: {vres:.3g}")
